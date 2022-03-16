@@ -1,7 +1,9 @@
 package transfer
 
 type Storage interface {
+	GetUserState(int64) UserState
+	PutUserState(int64, UserState)
 	AddService(string)
-	PutServiceData(string, int64, interface{})
-	GetServiceData(string, int64) interface{}
+	PutServiceData(int64, string, interface{})
+	GetServiceData(int64, string) interface{}
 }

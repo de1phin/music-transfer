@@ -11,12 +11,12 @@ func NewConsoleInteractor(defaultUserID int64) *consoleInteractor {
 	return &console
 }
 
-func (console *consoleInteractor) GetMessageFrom() (string, int64) {
+func (console *consoleInteractor) GetMessageFrom() (int64, string) {
 	var msg string
 	fmt.Scanln(&msg)
-	return msg, console.defaultUserID
+	return console.defaultUserID, msg
 }
 
-func (console *consoleInteractor) SendMessageTo(msg string, id int64) {
+func (console *consoleInteractor) SendMessageTo(id int64, msg string) {
 	fmt.Println(msg)
 }

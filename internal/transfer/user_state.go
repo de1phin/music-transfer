@@ -1,4 +1,8 @@
 package transfer
 
-type UserState struct {
-}
+type UserState int
+
+const (
+	Idle UserState = iota
+	PickingFirstService
+)
