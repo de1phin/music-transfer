@@ -5,9 +5,6 @@ import "fmt"
 type mockMusicService struct {
 }
 
-type credentials struct {
-}
-
 func NewMockMusicService() *mockMusicService {
 	return new(mockMusicService)
 }

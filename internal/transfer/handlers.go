@@ -6,12 +6,13 @@ import (
 
 func normalizeString(str string) string {
 
-	return strings.ToLower(strings.Trim(str, " \n"+string(13)))
+	return strings.ToLower(strings.Trim(str, " \n"+string(byte(13))))
 }
 
 func (transfer *Transfer) handle(id int64, userState UserState, message string) {
 	if userState == Idle {
 		if message == "Transfer" {
+			transfer.handlePickFirstService(id, userState, message)
 		} else if normalizeString(message) == normalizeString("Add service") {
 			transfer.handleAddService(id, userState, message)
 		} else {
@@ -20,35 +21,38 @@ func (transfer *Transfer) handle(id int64, userState UserState, message string) 
 	} else if userState == ChoosingServiceToAdd {
 		transfer.handleLogIntoService(id, userState, message)
 	}
+}
+
+func (transfer *Transfer) handlePickFirstService(id int64, userState UserState, message string) {
 
 }
 
 func (transfer *Transfer) handleLogIntoService(id int64, userState UserState, message string) {
 	validService := false
-	for _, service := range transfer.services {
+	for _, service := range transfer.Services {
 		if normalizeString(service.Name()) == normalizeString(message) {
 			validService = true
-			transfer.storage.PutUserState(id, LoggingIntoService)
-			transfer.interactor.SendURL(id, "Authorize via link:\n", service.GetAuthURL(id, transfer.callbackURL))
+			transfer.Storage.PutUserState(id, LoggingIntoService)
+			transfer.Interactor.SendURL(id, "Authorize via link:\n", service.GetAuthURL(id, transfer.Config.GetCallbackURL()))
 			break
 		}
 	}
 
 	if !validService {
-		transfer.storage.PutUserState(id, Idle)
-		transfer.interactor.SendMessageTo(id, "Invalid service")
+		transfer.Storage.PutUserState(id, Idle)
+		transfer.Interactor.SendMessageTo(id, "Invalid service")
 	}
 }
 
 func (transfer *Transfer) handleAddService(id int64, userState UserState, message string) {
-	transfer.storage.PutUserState(id, ChoosingServiceToAdd)
+	transfer.Storage.PutUserState(id, ChoosingServiceToAdd)
 	names := []string{}
-	for _, service := range transfer.services {
+	for _, service := range transfer.Services {
 		names = append(names, service.Name())
 	}
-	transfer.interactor.ChooseFrom(id, "Choose service you want to add: \n", names)
+	transfer.Interactor.ChooseFrom(id, "Choose service you want to add: \n", names)
 }
 
 func (transfer *Transfer) handleIdle(id int64, userState UserState, message string) {
-	transfer.interactor.SendMessageTo(id, "Choose one of the options:\nTransfer\nAdd service")
+	transfer.Interactor.SendMessageTo(id, "Choose one of the options:\nTransfer\nAdd service")
 }

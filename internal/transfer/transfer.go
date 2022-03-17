@@ -1,26 +1,19 @@
 package transfer
 
 type Transfer struct {
-	interactor  Interactor
-	storage     Storage
-	services    []MusicService
-	callbackURL string
+	Interactor Interactor
+	Storage    Storage
+	Services   []MusicService
+	Config     Config
 }
 
-func Run(interactor Interactor, storage Storage, services []MusicService) {
+func (transfer *Transfer) Run() {
 
-	transfer := &Transfer{
-		interactor:  interactor,
-		storage:     storage,
-		services:    services,
-		callbackURL: "localhost:8081",
-	}
-
-	transfer.SetUpCallbackServers(transfer.callbackURL)
+	transfer.SetUpCallbackServers(transfer.Config.GetCallbackURL())
 
 	for {
-		id, message := interactor.GetMessageFrom()
-		go transfer.handle(id, storage.GetUserState(id), message)
+		id, message := transfer.Interactor.GetMessageFrom()
+		go transfer.handle(id, transfer.Storage.GetUserState(id), message)
 	}
 
 }

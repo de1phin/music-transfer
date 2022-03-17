@@ -32,7 +32,6 @@ func (storage *cacheStorage) AddService(serviceName string) {
 }
 
 func (storage *cacheStorage) PutServiceData(id int64, serviceName string, data interface{}) {
-
 	for _, service := range storage.services {
 		if service.serviceName == serviceName {
 			storage.mutex.Lock()

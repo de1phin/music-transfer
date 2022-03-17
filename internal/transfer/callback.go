@@ -1,15 +1,22 @@
 package transfer
 
 import (
-	"log"
 	"net/http"
 )
 
 func (transfer *Transfer) SetUpCallbackServers(url string) {
 
-	for _, service := range transfer.services {
+	for _, service := range transfer.Services {
 		http.HandleFunc("/"+service.URLName(), func(w http.ResponseWriter, r *http.Request) {
-			log.Println("Got a response on", r.URL)
+			serviceURLName := r.URL.EscapedPath()[1:]
+			for _, service := range transfer.Services {
+				if service.URLName() == serviceURLName {
+					userID, credentials := service.Authorize(r)
+					transfer.Storage.PutServiceData(userID, service.Name(), credentials)
+					transfer.Storage.PutUserState(userID, Idle)
+					break
+				}
+			}
 		})
 	}
 
