@@ -19,6 +19,7 @@ type cacheStorage struct {
 
 func NewCacheStorage() *cacheStorage {
 	cache := new(cacheStorage)
+	cache.userState = make(map[int64]transfer.UserState)
 	return cache
 }
 

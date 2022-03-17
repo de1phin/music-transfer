@@ -4,5 +4,6 @@ type UserState int
 
 const (
 	Idle UserState = iota
-	PickingFirstService
+	ChoosingServiceToAdd
+	LoggingIntoService
 )
