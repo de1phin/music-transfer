@@ -33,7 +33,7 @@ func (transfer *Transfer) handleLogIntoService(id int64, userState UserState, me
 		if normalizeString(service.Name()) == normalizeString(message) {
 			validService = true
 			transfer.Storage.PutUserState(id, LoggingIntoService)
-			transfer.Interactor.SendURL(id, "Authorize via link:\n", service.GetAuthURL(id, transfer.Config.GetCallbackURL()))
+			transfer.Interactor.SendURL(id, "Authorize via link:\n", service.GetAuthURL(id))
 			break
 		}
 	}

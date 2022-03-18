@@ -5,16 +5,21 @@ import (
 	"github.com/de1phin/music-transfer/internal/config"
 	"github.com/de1phin/music-transfer/internal/console"
 	mockmusicservice "github.com/de1phin/music-transfer/internal/mock_music_service"
+	"github.com/de1phin/music-transfer/internal/spotify"
 	"github.com/de1phin/music-transfer/internal/transfer"
 )
 
 func main() {
+	config := config.NewConfig()
 	storage := cache.NewCacheStorage()
 	var services []transfer.MusicService
-	services = append(services, mockmusicservice.NewMockMusicService())
-	storage.AddService(services[0].Name())
-	interactor := console.NewConsoleInteractor(0)
-	config := config.NewConfig()
+	mockMusicService := mockmusicservice.NewMockMusicService(config.GetCallbackURL())
+	storage.AddService(mockMusicService.Name())
+	services = append(services, mockMusicService)
+	spotify := spotify.NewSpotifyService(config.GetSpotifyClientID(), config.GetSpotifyClientSecret(), config.GetSpotifyScope(), config.GetCallbackURL())
+	storage.AddService(spotify.Name())
+	services = append(services, spotify)
+	interactor := console.NewConsoleInteractor(17)
 
 	transfer := transfer.Transfer{
 		Interactor: interactor,

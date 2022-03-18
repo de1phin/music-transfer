@@ -9,7 +9,7 @@ type Transfer struct {
 
 func (transfer *Transfer) Run() {
 
-	transfer.SetUpCallbackServers(transfer.Config.GetCallbackURL())
+	transfer.SetUpCallbackServers()
 
 	for {
 		id, message := transfer.Interactor.GetMessageFrom()

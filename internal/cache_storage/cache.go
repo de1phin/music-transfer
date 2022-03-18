@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"log"
 	"sync"
 
 	"github.com/de1phin/music-transfer/internal/transfer"
@@ -36,6 +37,7 @@ func (storage *cacheStorage) PutServiceData(id int64, serviceName string, data i
 		if service.serviceName == serviceName {
 			storage.mutex.Lock()
 			service.data[id] = data
+			log.Println("Put", data)
 			storage.mutex.Unlock()
 			break
 		}

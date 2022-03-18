@@ -4,7 +4,7 @@ import (
 	"net/http"
 )
 
-func (transfer *Transfer) SetUpCallbackServers(url string) {
+func (transfer *Transfer) SetUpCallbackServers() {
 
 	for _, service := range transfer.Services {
 		http.HandleFunc("/"+service.URLName(), func(w http.ResponseWriter, r *http.Request) {
@@ -20,5 +20,5 @@ func (transfer *Transfer) SetUpCallbackServers(url string) {
 		})
 	}
 
-	go http.ListenAndServe(url, nil)
+	go http.ListenAndServe(transfer.Config.GetServerURL(), nil)
 }
