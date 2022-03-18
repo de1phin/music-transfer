@@ -5,54 +5,66 @@ import (
 )
 
 func normalizeString(str string) string {
-
 	return strings.ToLower(strings.Trim(str, " \n"+string(byte(13))))
 }
 
-func (transfer *Transfer) handle(id int64, userState UserState, message string) {
-	if userState == Idle {
-		if message == "Transfer" {
-			transfer.handlePickFirstService(id, userState, message)
-		} else if normalizeString(message) == normalizeString("Add service") {
-			transfer.handleAddService(id, userState, message)
+func (transfer *Transfer) handle(chat Chat) {
+	switch chat.userState {
+	case Idle:
+		if chat.message == "Transfer" {
+			transfer.handlePickFirstService(chat)
+		} else if normalizeString(chat.message) == normalizeString("Add service") {
+			transfer.handleAddService(chat)
 		} else {
-			transfer.handleIdle(id, userState, message)
+			transfer.handleIdle(chat)
 		}
-	} else if userState == ChoosingServiceToAdd {
-		transfer.handleLogIntoService(id, userState, message)
+	case ChoosingServiceToAdd:
+		transfer.handleLogIntoService(chat)
+	case LoggingIntoService:
+		transfer.handleCouldntLog(chat)
 	}
 }
 
-func (transfer *Transfer) handlePickFirstService(id int64, userState UserState, message string) {
+func (transfer *Transfer) handlePickFirstService(chat Chat) {
 
 }
 
-func (transfer *Transfer) handleLogIntoService(id int64, userState UserState, message string) {
+func (transfer *Transfer) handleLogged(chat Chat) {
+	transfer.Interactor.SendMessageTo(chat.userID, "Successfully authorized")
+	transfer.Storage.PutUserState(chat.userID, Idle)
+}
+
+func (transfer *Transfer) handleCouldntLog(chat Chat) {
+	transfer.Interactor.SendMessageTo(chat.userID, "Couldn't authorize into the service so far, please wait or try again")
+	transfer.Storage.PutUserState(chat.userID, Idle)
+}
+
+func (transfer *Transfer) handleLogIntoService(chat Chat) {
 	validService := false
 	for _, service := range transfer.Services {
-		if normalizeString(service.Name()) == normalizeString(message) {
+		if normalizeString(service.Name()) == normalizeString(chat.message) {
 			validService = true
-			transfer.Storage.PutUserState(id, LoggingIntoService)
-			transfer.Interactor.SendURL(id, "Authorize via link:\n", service.GetAuthURL(id))
+			transfer.Storage.PutUserState(chat.userID, LoggingIntoService)
+			transfer.Interactor.SendURL(chat.userID, "Authorize via link:\n", service.GetAuthURL(chat.userID))
 			break
 		}
 	}
 
 	if !validService {
-		transfer.Storage.PutUserState(id, Idle)
-		transfer.Interactor.SendMessageTo(id, "Invalid service")
+		transfer.Storage.PutUserState(chat.userID, Idle)
+		transfer.Interactor.SendMessageTo(chat.userID, "Invalid service")
 	}
 }
 
-func (transfer *Transfer) handleAddService(id int64, userState UserState, message string) {
-	transfer.Storage.PutUserState(id, ChoosingServiceToAdd)
+func (transfer *Transfer) handleAddService(chat Chat) {
+	transfer.Storage.PutUserState(chat.userID, ChoosingServiceToAdd)
 	names := []string{}
 	for _, service := range transfer.Services {
 		names = append(names, service.Name())
 	}
-	transfer.Interactor.ChooseFrom(id, "Choose service you want to add: \n", names)
+	transfer.Interactor.ChooseFrom(chat.userID, "Choose service you want to add: \n", names)
 }
 
-func (transfer *Transfer) handleIdle(id int64, userState UserState, message string) {
-	transfer.Interactor.SendMessageTo(id, "Choose one of the options:\nTransfer\nAdd service")
+func (transfer *Transfer) handleIdle(chat Chat) {
+	transfer.Interactor.SendMessageTo(chat.userID, "Choose one of the options:\nTransfer\nAdd service")
 }

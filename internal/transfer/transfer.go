@@ -13,7 +13,12 @@ func (transfer *Transfer) Run() {
 
 	for {
 		id, message := transfer.Interactor.GetMessageFrom()
-		go transfer.handle(id, transfer.Storage.GetUserState(id), message)
+		chat := Chat{
+			userID:    id,
+			userState: transfer.Storage.GetUserState(id),
+			message:   message,
+		}
+		go transfer.handle(chat)
 	}
 
 }
