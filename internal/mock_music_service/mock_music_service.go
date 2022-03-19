@@ -1,5 +1,11 @@
 package mockmusicservice
 
+import (
+	"log"
+
+	"github.com/de1phin/music-transfer/internal/transfer"
+)
+
 type mockMusicService struct {
 	callbackURL string
 }
@@ -14,4 +20,12 @@ func (service *mockMusicService) Name() string {
 
 func (service *mockMusicService) URLName() string {
 	return "mock"
+}
+
+func (service *mockMusicService) GetFavourites(interface{}) transfer.Playlist {
+	return transfer.Playlist{Name: "abobus", Songs: []transfer.Song{{Name: "bibik"}}}
+}
+
+func (service *mockMusicService) AddFavourites(credentials interface{}, playlist transfer.Playlist) {
+	log.Println("[mock] Asked to add", playlist)
 }

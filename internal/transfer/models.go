@@ -8,12 +8,30 @@ const (
 	Idle UserState = iota
 	ChoosingServiceToAdd
 	LoggingIntoService
+	PickingFirstService
+	PickingSecondService
+	Transfering
 )
 
+type User struct {
+	ID          int64
+	State       UserState
+	ServiceFrom string
+	ServiceTo   string
+}
+
 type Chat struct {
-	userID    int64
-	userState UserState
-	message   string
+	user    User
+	message string
+}
+
+type Playlist struct {
+	Name  string
+	Songs []Song
+}
+
+type Song struct {
+	Name string
 }
 
 type MusicService interface {
@@ -22,11 +40,14 @@ type MusicService interface {
 	GetAuthURL(int64) string
 	Authorize(callback *http.Request) (int64, interface{})
 	ValidAuthCallback(callback *http.Request) bool
+	GetFavourites(interface{}) Playlist
+	AddFavourites(interface{}, Playlist)
 }
 
 type Storage interface {
-	GetUserState(int64) UserState
-	PutUserState(int64, UserState)
+	HasUser(int64) bool
+	GetUser(int64) User
+	PutUser(User)
 	AddService(string)
 	PutServiceData(int64, string, interface{})
 	GetServiceData(int64, string) interface{}

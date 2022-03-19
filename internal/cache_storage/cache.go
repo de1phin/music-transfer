@@ -13,14 +13,14 @@ type serviceRepository struct {
 }
 
 type cacheStorage struct {
-	mutex     sync.Mutex
-	userState map[int64]transfer.UserState
-	services  []*serviceRepository
+	mutex    sync.Mutex
+	user     map[int64]transfer.User
+	services []*serviceRepository
 }
 
 func NewCacheStorage() *cacheStorage {
 	cache := new(cacheStorage)
-	cache.userState = make(map[int64]transfer.UserState)
+	cache.user = make(map[int64]transfer.User)
 	return cache
 }
 
@@ -56,12 +56,18 @@ func (storage *cacheStorage) GetServiceData(id int64, serviceName string) interf
 	return nil
 }
 
-func (storage *cacheStorage) GetUserState(id int64) transfer.UserState {
-	return storage.userState[id]
+func (storage *cacheStorage) HasUser(id int64) bool {
+	_, ok := storage.user[id]
+	return ok
 }
 
-func (storage *cacheStorage) PutUserState(id int64, userState transfer.UserState) {
+func (storage *cacheStorage) GetUser(id int64) transfer.User {
+	return storage.user[id]
+}
+
+func (storage *cacheStorage) PutUser(user transfer.User) {
 	storage.mutex.Lock()
-	storage.userState[id] = userState
+	storage.user[user.ID] = user
+	log.Println("Put", user)
 	storage.mutex.Unlock()
 }

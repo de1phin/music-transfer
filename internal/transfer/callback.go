@@ -16,8 +16,10 @@ func (transfer *Transfer) SetUpCallbackServers() {
 						log.Println("Good callback")
 						userID, credentials := service.Authorize(r)
 						transfer.Storage.PutServiceData(userID, service.Name(), credentials)
-						transfer.Storage.PutUserState(userID, Idle)
-						transfer.handleLogged(Chat{userID, transfer.Storage.GetUserState(userID), ""})
+						user := transfer.Storage.GetUser(userID)
+						user.State = Idle
+						transfer.Storage.PutUser(user)
+						transfer.handleLogged(Chat{user, ""})
 					} else {
 						log.Println("Bad callback")
 					}
