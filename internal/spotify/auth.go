@@ -43,20 +43,3 @@ func (spotify *spotifyService) Authorize(callback *http.Request) (int64, interfa
 
 	return userID, credentials
 }
-
-func (spotify *spotifyService) ValidAuthCallback(callback *http.Request) bool {
-	if callback == nil {
-		return false
-	}
-	m, err := url.ParseQuery(callback.URL.RawQuery)
-	if err != nil {
-		return false
-	}
-	if len(m["state"]) != 1 {
-		return false
-	}
-	if m["state"][0] == "Authorized" {
-		return false
-	}
-	return true
-}

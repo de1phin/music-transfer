@@ -39,7 +39,6 @@ type MusicService interface {
 	URLName() string
 	GetAuthURL(int64) string
 	Authorize(callback *http.Request) (int64, interface{})
-	ValidAuthCallback(callback *http.Request) bool
 	GetFavourites(interface{}) Playlist
 	AddFavourites(interface{}, Playlist)
 }

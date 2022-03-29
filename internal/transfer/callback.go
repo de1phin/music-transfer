@@ -12,17 +12,13 @@ func (transfer *Transfer) SetUpCallbackServers() {
 			serviceURLName := r.URL.EscapedPath()[1:]
 			for _, service := range transfer.Services {
 				if service.URLName() == serviceURLName {
-					if service.ValidAuthCallback(r) {
-						log.Println("Good callback")
-						userID, credentials := service.Authorize(r)
-						transfer.Storage.PutServiceData(userID, service.Name(), credentials)
-						user := transfer.Storage.GetUser(userID)
-						user.State = Idle
-						transfer.Storage.PutUser(user)
-						transfer.handleLogged(Chat{user, ""})
-					} else {
-						log.Println("Bad callback")
-					}
+					log.Println("Good callback")
+					userID, credentials := service.Authorize(r)
+					transfer.Storage.PutServiceData(userID, service.Name(), credentials)
+					user := transfer.Storage.GetUser(userID)
+					user.State = Idle
+					transfer.Storage.PutUser(user)
+					transfer.handleLogged(Chat{user, ""})
 				}
 			}
 		})

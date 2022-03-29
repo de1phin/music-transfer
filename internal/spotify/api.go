@@ -10,7 +10,7 @@ import (
 	"github.com/de1phin/music-transfer/internal/transfer"
 )
 
-func (spotify *spotifyService) AddFavourites(credentials interface{}, playlist transfer.Playlist) {
+func (spotify *spotifyService) AddFavourites(tokens interface{}, playlist transfer.Playlist) {
 	log.Println("[Spotify] Asked to add", playlist)
 }
 
