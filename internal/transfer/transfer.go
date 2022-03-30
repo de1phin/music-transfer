@@ -56,9 +56,13 @@ func (transfer *Transfer) getServiceByName(name string) (MusicService, error) {
 	return nil, errors.New("Invalid service")
 }
 
-func (transfer *Transfer) Transfer(userID int64, from MusicService, to MusicService) {
+func (transfer *Transfer) Transfer(user User, from MusicService, to MusicService) {
 	log.Println("Transfering from", from.Name(), "to", to.Name())
-	toData := transfer.Storage.GetServiceData(userID, to.Name())
-	fromData := transfer.Storage.GetServiceData(userID, from.Name())
+	toData := transfer.Storage.GetServiceData(user.ID, to.Name())
+	fromData := transfer.Storage.GetServiceData(user.ID, from.Name())
 	to.AddFavourites(toData, from.GetFavourites(fromData))
+	to.AddPlaylists(toData, from.GetPlaylists(fromData))
+	transfer.Interactor.SendMessageTo(user.ID, "Success!")
+	user.State = Idle
+	transfer.Storage.PutUser(user)
 }

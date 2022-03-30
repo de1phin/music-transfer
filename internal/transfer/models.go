@@ -31,7 +31,8 @@ type Playlist struct {
 }
 
 type Song struct {
-	Name string
+	Name    string
+	Artists string
 }
 
 type MusicService interface {
@@ -39,8 +40,11 @@ type MusicService interface {
 	URLName() string
 	GetAuthURL(int64) string
 	Authorize(callback *http.Request) (int64, interface{})
+	ValidAuthCallback(callback *http.Request) bool
 	GetFavourites(interface{}) Playlist
 	AddFavourites(interface{}, Playlist)
+	GetPlaylists(interface{}) []Playlist
+	AddPlaylists(interface{}, []Playlist)
 }
 
 type Storage interface {

@@ -37,3 +37,7 @@ func (youtube *YouTubeService) Authorize(callback *http.Request) (int64, interfa
 
 	return userID, credentials
 }
+
+func (youtube *YouTubeService) ValidAuthCallback(callback *http.Request) bool {
+	return true
+}

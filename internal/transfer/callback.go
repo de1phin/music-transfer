@@ -11,7 +11,7 @@ func (transfer *Transfer) SetUpCallbackServers() {
 		http.HandleFunc("/"+service.URLName(), func(w http.ResponseWriter, r *http.Request) {
 			serviceURLName := r.URL.EscapedPath()[1:]
 			for _, service := range transfer.Services {
-				if service.URLName() == serviceURLName {
+				if service.URLName() == serviceURLName && service.ValidAuthCallback(r) {
 					log.Println("Good callback")
 					userID, credentials := service.Authorize(r)
 					transfer.Storage.PutServiceData(userID, service.Name(), credentials)
@@ -25,6 +25,7 @@ func (transfer *Transfer) SetUpCallbackServers() {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {})
+	http.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {})
 
 	go http.ListenAndServe(transfer.Config.GetServerURL(), nil)
 }

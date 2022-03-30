@@ -9,5 +9,20 @@ type trackItem struct {
 }
 
 type track struct {
+	Name    string   `json:"name"`
+	Artists []artist `json:"artists"`
+}
+
+type artist struct {
 	Name string `json:"name"`
+}
+
+type playlist struct {
+	Name   string         `json:"name"`
+	ID     string         `json:"ID"`
+	Tracks tracksResponse `json:"tracks"`
+}
+
+type playlistResponse struct {
+	Items []playlist `json:"items"`
 }

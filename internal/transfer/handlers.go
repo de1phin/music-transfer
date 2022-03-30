@@ -34,7 +34,7 @@ func (transfer *Transfer) handlePickSecondService(chat Chat) {
 	chat.user.ServiceTo = service.Name()
 	transfer.Storage.PutUser(chat.user)
 	serviceFrom, _ := transfer.getServiceByName(chat.user.ServiceFrom)
-	transfer.Transfer(chat.user.ID, serviceFrom, service)
+	transfer.Transfer(chat.user, serviceFrom, service)
 }
 
 func (transfer *Transfer) handlePickFirstService(chat Chat) {
