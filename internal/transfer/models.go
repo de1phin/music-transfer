@@ -37,7 +37,7 @@ type Song struct {
 
 type MusicService interface {
 	Name() string
-	URLName() string
+	InitCallbackServer(string) (string, bool)
 	GetAuthURL(int64) string
 	Authorize(callback *http.Request) (int64, interface{})
 	ValidAuthCallback(callback *http.Request) bool

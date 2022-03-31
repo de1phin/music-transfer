@@ -12,7 +12,7 @@ import (
 )
 
 func (youtube *YouTubeService) GetAuthURL(id int64) string {
-	return fmt.Sprintf("https://accounts.google.com/o/oauth2/v2/auth?client_id=%s&response_type=code&scope=%s&redirect_uri=%s/%s&state=%d", youtube.clientID, youtube.scope, youtube.redirectURL, youtube.URLName(), id)
+	return fmt.Sprintf("https://accounts.google.com/o/oauth2/v2/auth?client_id=%s&response_type=code&scope=%s&redirect_uri=%s%s&state=%d", youtube.clientID, youtube.scope, youtube.redirectURL, youtube.endpoint, id)
 }
 
 func (youtube *YouTubeService) Authorize(callback *http.Request) (int64, interface{}) {
@@ -21,7 +21,7 @@ func (youtube *YouTubeService) Authorize(callback *http.Request) (int64, interfa
 
 	code := m["code"][0]
 
-	body := bytes.NewReader([]byte(fmt.Sprintf("code=%s&client_id=%s&client_secret=%s&redirect_uri=%s/%s&grant_type=authorization_code", code, youtube.clientID, youtube.clientSecret, youtube.redirectURL, youtube.URLName())))
+	body := bytes.NewReader([]byte(fmt.Sprintf("code=%s&client_id=%s&client_secret=%s&redirect_uri=%s/%s&grant_type=authorization_code", code, youtube.clientID, youtube.clientSecret, youtube.redirectURL, youtube.endpoint)))
 
 	request, _ := http.NewRequest("POST", "https://oauth2.googleapis.com/token", body)
 	request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
@@ -39,5 +39,8 @@ func (youtube *YouTubeService) Authorize(callback *http.Request) (int64, interfa
 }
 
 func (youtube *YouTubeService) ValidAuthCallback(callback *http.Request) bool {
+	if callback.URL.Path != youtube.endpoint {
+		return false
+	}
 	return true
 }

@@ -18,7 +18,7 @@ type credentials struct {
 }
 
 func (spotify *spotifyService) GetAuthURL(id int64) string {
-	return fmt.Sprintf("https://accounts.spotify.com/authorize?client_id=%s&response_type=code&redirect_uri=%s/%s&scope=%s&state=%d", spotify.clientID, spotify.callbackURL, spotify.URLName(), spotify.scope, id)
+	return fmt.Sprintf("https://accounts.spotify.com/authorize?client_id=%s&response_type=code&redirect_uri=%s%s&scope=%s&state=%d", spotify.clientID, spotify.callbackURL, spotify.endpoint, spotify.scope, id)
 }
 
 func (spotify *spotifyService) Authorize(callback *http.Request) (int64, interface{}) {
@@ -46,6 +46,9 @@ func (spotify *spotifyService) Authorize(callback *http.Request) (int64, interfa
 
 func (spotify *spotifyService) ValidAuthCallback(callback *http.Request) bool {
 	log.Println("Asked to check", callback.URL)
+	if callback.URL.Path != spotify.endpoint {
+		return false
+	}
 	if callback == nil {
 		return false
 	}

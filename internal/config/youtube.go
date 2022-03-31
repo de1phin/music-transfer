@@ -19,3 +19,7 @@ func (*config) GetYouTubeClientSecret() string {
 func (*config) GetYouTubeScope() string {
 	return viper.GetString("youtube.scope")
 }
+
+func (*config) GetYouTubeEndpoint() string {
+	return viper.GetString("youtube.endpoint")
+}

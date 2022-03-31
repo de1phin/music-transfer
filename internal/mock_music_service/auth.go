@@ -1,7 +1,6 @@
 package mockmusicservice
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -13,7 +12,7 @@ type credentials struct {
 }
 
 func (service *mockMusicService) GetAuthURL(id int64) string {
-	return fmt.Sprintf("%s?id=%d", service.callbackURL+"/"+service.URLName(), id)
+	return "mock has no url:(("
 }
 
 func (service *mockMusicService) Authorize(callback *http.Request) (int64, interface{}) {
@@ -26,5 +25,5 @@ func (service *mockMusicService) Authorize(callback *http.Request) (int64, inter
 }
 
 func (service *mockMusicService) ValidAuthCallback(callback *http.Request) bool {
-	return true
+	return false
 }

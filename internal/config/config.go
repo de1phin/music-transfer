@@ -15,11 +15,3 @@ func NewConfig() *config {
 
 	return &config{}
 }
-
-func (*config) GetCallbackURL() string {
-	return viper.GetString("callbackURL")
-}
-
-func (*config) GetServerURL() string {
-	return viper.GetString("serverURL")
-}

@@ -13,3 +13,7 @@ func (*config) GetSpotifyScope() string {
 func (*config) GetSpotifyClientSecret() string {
 	return viper.GetString("spotify.clientSecret")
 }
+
+func (*config) GetSpotifyEndpoint() string {
+	return viper.GetString("spotify.endpoint")
+}

@@ -1,21 +1,38 @@
 package youtube
 
 type YouTubeService struct {
-	redirectURL  string
-	scope        string
 	apiKey       string
 	clientID     string
 	clientSecret string
+	scope        string
+	endpoint     string
+	redirectURL  string
 }
 
-func NewYouTubeService(redirectURL, scope, apiKey, clientID, clientSecret string) *YouTubeService {
-	return &YouTubeService{redirectURL, scope, apiKey, clientID, clientSecret}
+type YouTubeConfig interface {
+	GetYouTubeApiKEY() string
+	GetYouTubeClientID() string
+	GetYouTubeClientSecret() string
+	GetYouTubeScope() string
+	GetYouTubeEndpoint() string
+}
+
+func NewYouTubeService(config YouTubeConfig) *YouTubeService {
+	return &YouTubeService{
+		apiKey:       config.GetYouTubeApiKEY(),
+		clientID:     config.GetYouTubeClientID(),
+		clientSecret: config.GetYouTubeClientSecret(),
+		scope:        config.GetYouTubeScope(),
+		endpoint:     config.GetYouTubeEndpoint(),
+	}
 }
 
 func (*YouTubeService) Name() string {
 	return "YouTube"
 }
 
-func (*YouTubeService) URLName() string {
-	return "youtube"
+func (youtube *YouTubeService) InitCallbackServer(url string) (string, bool) {
+	youtube.redirectURL = url
+
+	return youtube.endpoint, true
 }
