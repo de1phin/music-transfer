@@ -1,37 +1,47 @@
 package main
 
 import (
-	cache "github.com/de1phin/music-transfer/internal/cache_storage"
+	spotifyAPI "github.com/de1phin/music-transfer/internal/api/spotify"
 	"github.com/de1phin/music-transfer/internal/config"
-	"github.com/de1phin/music-transfer/internal/console"
-	mockmusicservice "github.com/de1phin/music-transfer/internal/mock_music_service"
-	"github.com/de1phin/music-transfer/internal/spotify"
-	"github.com/de1phin/music-transfer/internal/transfer"
-	"github.com/de1phin/music-transfer/internal/youtube"
+	"github.com/de1phin/music-transfer/internal/interactor"
+	consoleInteractor "github.com/de1phin/music-transfer/internal/interactor/interactors/console"
+	consoleValidator "github.com/de1phin/music-transfer/internal/interactor/validator/console"
+	"github.com/de1phin/music-transfer/internal/mux"
+	"github.com/de1phin/music-transfer/internal/server/callback"
+	"github.com/de1phin/music-transfer/internal/service/spotify"
+	"github.com/de1phin/music-transfer/internal/storage/cache"
 )
 
 func main() {
-	config := config.NewConfig()
-	storage := cache.NewCacheStorage()
-	var services []transfer.MusicService
-	mockMusicService := mockmusicservice.NewMockMusicService()
-	storage.AddService(mockMusicService.Name())
-	services = append(services, mockMusicService)
-	spotify := spotify.NewSpotifyService(config)
-	storage.AddService(spotify.Name())
-	services = append(services, spotify)
-	youtube := youtube.NewYouTubeService(config)
-	storage.AddService(youtube.Name())
-	services = append(services, youtube)
-	interactor := console.NewConsoleInteractor(17)
 
-	transfer := transfer.Transfer{
-		Interactor: interactor,
-		Storage:    storage,
-		Services:   services,
-		Config:     config,
+	config := config.NewConfig()
+
+	spotifyConfig := spotify.SpotifyConfig{
+		Scopes: config.GetSpotifyScope(),
+		Client: spotifyAPI.Client{
+			ID:     config.GetSpotifyClientID(),
+			Secret: config.GetSpotifyClientSecret(),
+		},
+	}
+	server := callback.NewCallbackServer(config.GetServerURL())
+
+	spotifyStorage := cache.NewCacheStorage[spotifyAPI.Credentials]()
+	spotifyAPI := spotifyAPI.NewSpotifyAPI(spotifyConfig.Client, config.GetCallbackURL())
+	spotify := spotify.NewSpotifyService(spotifyConfig, config.GetCallbackURL(), spotifyAPI, spotifyStorage)
+	spotifyAPI.BindHandler(server.ServeMux, spotify.OnGetTokens)
+
+	services := []mux.Service{
+		spotify,
 	}
 
-	transfer.Run()
+	consoleInteractor := consoleInteractor.NewConsoleInteractor(17)
+	consoleValidator := consoleValidator.Validator{}
+	console := interactor.NewInteractorSpec(consoleInteractor, consoleValidator)
+
+	stateStorage := cache.NewCacheStorage[mux.UserState]()
+	mux := mux.NewMux(services, console, stateStorage)
+
+	go server.Run()
+	mux.Run()
 
 }
