@@ -34,5 +34,5 @@ func (cs *cacheStorage[T]) Put(id int64, data T) {
 	cs.Lock()
 	defer cs.Unlock()
 	cs.storage[id] = data
-	log.Println(data)
+	log.Println("for", id, data)
 }

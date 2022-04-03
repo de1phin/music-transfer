@@ -1,38 +1,53 @@
-package mockmusicservice
+package mock
 
 import (
+	"fmt"
 	"log"
 
-	"github.com/de1phin/music-transfer/internal/transfer"
+	"github.com/de1phin/music-transfer/internal/mux"
 )
 
-type mockMusicService struct {
+type Mock struct{}
+
+func NewMockService() *Mock {
+	return &Mock{}
 }
 
-func NewMockMusicService() *mockMusicService {
-	return &mockMusicService{}
+func (*Mock) Name() string {
+	return "mock"
 }
 
-func (service *mockMusicService) Name() string {
-	return "Mock"
+func (*Mock) GetAuthURL(userID int64) string {
+	return fmt.Sprintf("mock/user_id=%d", userID)
 }
 
-func (service *mockMusicService) GetFavourites(interface{}) transfer.Playlist {
-	return transfer.Playlist{Name: "abobus", Songs: []transfer.Song{{Name: "bibik"}}}
+func (*Mock) GetLiked(int64) mux.Playlist {
+	return mux.Playlist{Title: "Liked", Songs: []mux.Song{
+		{
+			Title:   "Дед Максим",
+			Artists: "RADIO TAPOK",
+		},
+	}}
 }
 
-func (service *mockMusicService) AddFavourites(credentials interface{}, playlist transfer.Playlist) {
-	log.Println("[mock] Asked to add", playlist)
+func (*Mock) AddLiked(userID int64, liked mux.Playlist) {
+	log.Println("[mock] Asked to like:", liked)
 }
 
-func (service *mockMusicService) GetPlaylists(interface{}) []transfer.Playlist {
-	return nil
+func (*Mock) GetPlaylists(int64) []mux.Playlist {
+	return []mux.Playlist{
+		{
+			Title: "Ded",
+			Songs: []mux.Song{
+				{
+					Title:   "Дед Максим",
+					Artists: "RADIO TAPOK",
+				},
+			},
+		},
+	}
 }
 
-func (service *mockMusicService) AddPlaylists(_ interface{}, playlists []transfer.Playlist) {
-	log.Println("[mock] Asked to add", playlists)
-}
-
-func (service *mockMusicService) InitCallbackServer(string) (string, bool) {
-	return "", false
+func (*Mock) AddPlaylists(userID int64, playlists []mux.Playlist) {
+	log.Println("[mock] Asked to add:", playlists)
 }

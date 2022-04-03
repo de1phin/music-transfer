@@ -10,24 +10,32 @@ type Handler func(UserState, interactor.Message) bool
 type Service interface {
 	Name() string
 	GetAuthURL(int64) string
+	GetLiked(int64) Playlist
+	AddLiked(int64, Playlist)
+	GetPlaylists(int64) []Playlist
+	AddPlaylists(int64, []Playlist)
 }
 
 type Mux struct {
-	services     []Service
-	stateStorage storage.Storage[UserState]
-	interactor   interactor.InteractorSpec
-	handlers     []Handler
+	services        []Service
+	stateStorage    storage.Storage[UserState]
+	transferStorage storage.Storage[Transfer]
+	interactor      interactor.InteractorSpec
+	handlers        []Handler
 }
 
-func NewMux(services []Service, interactor interactor.InteractorSpec, stateStorage storage.Storage[UserState]) *Mux {
+func NewMux(services []Service, interactor interactor.InteractorSpec, stateStorage storage.Storage[UserState], transferStorage storage.Storage[Transfer]) *Mux {
 	mux := Mux{
-		services:     services,
-		interactor:   interactor,
-		stateStorage: stateStorage,
+		services:        services,
+		interactor:      interactor,
+		stateStorage:    stateStorage,
+		transferStorage: transferStorage,
 	}
 	mux.handlers = []Handler{
 		NewStateHandler(Idle, mux.HandleIdle),
 		NewStateHandler(ChoosingService, mux.HandleAuthorize),
+		NewStateHandler(ChoosingSrc, mux.HandleChoosingSrc),
+		NewStateHandler(ChoosingDst, mux.HandleChoosingDst),
 	}
 	return &mux
 }

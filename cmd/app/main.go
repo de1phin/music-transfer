@@ -8,6 +8,7 @@ import (
 	consoleValidator "github.com/de1phin/music-transfer/internal/interactor/validator/console"
 	"github.com/de1phin/music-transfer/internal/mux"
 	"github.com/de1phin/music-transfer/internal/server/callback"
+	"github.com/de1phin/music-transfer/internal/service/mock"
 	"github.com/de1phin/music-transfer/internal/service/spotify"
 	"github.com/de1phin/music-transfer/internal/storage/cache"
 )
@@ -32,6 +33,7 @@ func main() {
 
 	services := []mux.Service{
 		spotify,
+		mock.NewMockService(),
 	}
 
 	consoleInteractor := consoleInteractor.NewConsoleInteractor(17)
@@ -39,7 +41,8 @@ func main() {
 	console := interactor.NewInteractorSpec(consoleInteractor, consoleValidator)
 
 	stateStorage := cache.NewCacheStorage[mux.UserState]()
-	mux := mux.NewMux(services, console, stateStorage)
+	transferStorage := cache.NewCacheStorage[mux.Transfer]()
+	mux := mux.NewMux(services, console, stateStorage, transferStorage)
 
 	go server.Run()
 	mux.Run()
