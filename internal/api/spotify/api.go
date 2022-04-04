@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 )
@@ -181,7 +180,6 @@ func (api *SpotifyAPI) CreatePlaylist(tokens Credentials, name string) Playlist 
 }
 
 func (api *SpotifyAPI) AddToPlaylist(tokens Credentials, playlistID string, tracks []Track) {
-	log.Println("Add to", playlistID, tracks)
 	if len(tracks) == 0 {
 		return
 	}

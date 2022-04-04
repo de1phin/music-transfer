@@ -2,6 +2,7 @@ package main
 
 import (
 	spotifyAPI "github.com/de1phin/music-transfer/internal/api/spotify"
+	youtubeAPI "github.com/de1phin/music-transfer/internal/api/youtube"
 	"github.com/de1phin/music-transfer/internal/config"
 	"github.com/de1phin/music-transfer/internal/interactor"
 	consoleInteractor "github.com/de1phin/music-transfer/internal/interactor/interactors/console"
@@ -10,6 +11,7 @@ import (
 	"github.com/de1phin/music-transfer/internal/server/callback"
 	"github.com/de1phin/music-transfer/internal/service/mock"
 	"github.com/de1phin/music-transfer/internal/service/spotify"
+	"github.com/de1phin/music-transfer/internal/service/youtube"
 	"github.com/de1phin/music-transfer/internal/storage/cache"
 )
 
@@ -31,8 +33,21 @@ func main() {
 	spotify := spotify.NewSpotifyService(spotifyConfig, config.GetCallbackURL(), spotifyAPI, spotifyStorage)
 	spotifyAPI.BindHandler(server.ServeMux, spotify.OnGetTokens)
 
+	youtubeStorage := cache.NewCacheStorage[youtubeAPI.Credentials]()
+	youtubeConfig := youtubeAPI.YoutubeConfig{
+		APIKey:       config.GetYouTubeApiKEY(),
+		ClientID:     config.GetYouTubeClientID(),
+		ClientSecret: config.GetYouTubeClientSecret(),
+		Scopes:       config.GetYouTubeScope(),
+		RedirectURI:  config.GetCallbackURL() + "/youtube",
+	}
+	youtubeAPI := youtubeAPI.NewYoutubeAPI(&youtubeConfig)
+	youtube := youtube.NewYouTubeService(youtubeAPI, youtubeStorage, &youtubeConfig)
+	youtubeAPI.BindHandler(server.ServeMux, youtube.OnGetTokens)
+
 	services := []mux.Service{
 		spotify,
+		youtube,
 		mock.NewMockService(),
 	}
 

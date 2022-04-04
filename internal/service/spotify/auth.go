@@ -17,6 +17,6 @@ func (ss *spotifyService) GetAuthURL(userID int64) string {
 	)
 }
 
-func (ss *spotifyService) OnGetTokens(userID int64, credentials spotify.Credentials) {
-	ss.storage.Put(userID, credentials)
+func (ss *spotifyService) OnGetTokens(userID int64, tokens spotify.Credentials) {
+	ss.tokenStorage.Put(userID, tokens)
 }

@@ -1,14 +1,22 @@
 package youtube
 
-type credentials struct {
+type Credentials struct {
 	AccessToken string `json:"access_token"`
+}
+
+type YoutubeConfig struct {
+	APIKey       string
+	ClientID     string
+	ClientSecret string
+	Scopes       string
+	RedirectURI  string
 }
 
 type pageInfo struct {
 	TotalResults int64 `json:"totalResults"`
 }
 
-type playlist struct {
+type Playlist struct {
 	ID      string  `json:"id"`
 	Snippet snippet `json:"snippet"`
 }
@@ -16,7 +24,7 @@ type playlist struct {
 type playlistListResponse struct {
 	PageInfo      pageInfo   `json:"pageInfo"`
 	NextPageToken string     `json:"nextPageToken"`
-	Items         []playlist `json:"items"`
+	Items         []Playlist `json:"items"`
 }
 
 type snippet struct {
@@ -24,12 +32,12 @@ type snippet struct {
 	ChannelTitle string `json:"channelTitle"`
 }
 
-type video struct {
+type Video struct {
 	Snippet snippet `json:"snippet"`
 }
 
 type videoListResponse struct {
-	Items         []video  `json:"items"`
+	Items         []Video  `json:"items"`
 	PageInfo      pageInfo `json:"pageInfo"`
 	NextPageToken string   `json:"nextPageToken"`
 }

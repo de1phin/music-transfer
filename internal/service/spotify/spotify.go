@@ -15,20 +15,20 @@ type SpotifyConfig struct {
 }
 
 type spotifyService struct {
-	scopes      string
-	client      spotify.Client
-	api         *spotify.SpotifyAPI
-	redirectURI string
-	storage     storage.Storage[spotify.Credentials]
+	scopes       string
+	client       spotify.Client
+	api          *spotify.SpotifyAPI
+	redirectURI  string
+	tokenStorage storage.Storage[spotify.Credentials]
 }
 
-func NewSpotifyService(config SpotifyConfig, redirectURI string, spotifyAPI *spotify.SpotifyAPI, storage storage.Storage[spotify.Credentials]) *spotifyService {
+func NewSpotifyService(config SpotifyConfig, redirectURI string, spotifyAPI *spotify.SpotifyAPI, tokenStorage storage.Storage[spotify.Credentials]) *spotifyService {
 	return &spotifyService{
-		scopes:      config.Scopes,
-		client:      config.Client,
-		api:         spotifyAPI,
-		redirectURI: redirectURI,
-		storage:     storage,
+		scopes:       config.Scopes,
+		client:       config.Client,
+		api:          spotifyAPI,
+		redirectURI:  redirectURI,
+		tokenStorage: tokenStorage,
 	}
 }
 
@@ -37,7 +37,7 @@ func (spotify *spotifyService) Name() string {
 }
 
 func (spotify *spotifyService) GetLiked(userID int64) (liked mux.Playlist) {
-	tokens := spotify.storage.Get(userID)
+	tokens := spotify.tokenStorage.Get(userID)
 	playlist := spotify.api.GetLiked(tokens)
 	liked.Title = playlist.Name
 	for _, track := range playlist.Tracks.Items {
@@ -56,7 +56,7 @@ func (spotify *spotifyService) GetLiked(userID int64) (liked mux.Playlist) {
 }
 
 func (spotify *spotifyService) AddLiked(userID int64, liked mux.Playlist) {
-	tokens := spotify.storage.Get(userID)
+	tokens := spotify.tokenStorage.Get(userID)
 	tracks := make([]spotifyAPI.Track, 0)
 	for _, track := range liked.Songs {
 		search := spotify.api.SearchTrack(tokens, track.Title, track.Artists)
@@ -69,7 +69,7 @@ func (spotify *spotifyService) AddLiked(userID int64, liked mux.Playlist) {
 }
 
 func (spotify *spotifyService) GetPlaylists(userID int64) (playlists []mux.Playlist) {
-	tokens := spotify.storage.Get(userID)
+	tokens := spotify.tokenStorage.Get(userID)
 	spotifyPlaylists := spotify.api.GetUserPlaylists(tokens)
 	for _, playlist := range spotifyPlaylists {
 		tracks := spotify.api.GetPlaylistTracks(tokens, playlist.ID)
@@ -93,7 +93,7 @@ func (spotify *spotifyService) GetPlaylists(userID int64) (playlists []mux.Playl
 }
 
 func (spotify *spotifyService) AddPlaylists(userID int64, playlists []mux.Playlist) {
-	tokens := spotify.storage.Get(userID)
+	tokens := spotify.tokenStorage.Get(userID)
 	userPlaylists := spotify.api.GetUserPlaylists(tokens)
 
 	for _, playlist := range playlists {

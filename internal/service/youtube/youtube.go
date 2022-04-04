@@ -1,38 +1,51 @@
 package youtube
 
-type YouTubeService struct {
-	apiKey       string
-	clientID     string
-	clientSecret string
-	scope        string
-	endpoint     string
-	redirectURL  string
+import (
+	"github.com/de1phin/music-transfer/internal/api/youtube"
+	"github.com/de1phin/music-transfer/internal/mux"
+	"github.com/de1phin/music-transfer/internal/storage"
+)
+
+type youtubeService struct {
+	tokenStorage storage.Storage[youtube.Credentials]
+	config       *youtube.YoutubeConfig
+	api          *youtube.YoutubeAPI
 }
 
-type YouTubeConfig interface {
-	GetYouTubeApiKEY() string
-	GetYouTubeClientID() string
-	GetYouTubeClientSecret() string
-	GetYouTubeScope() string
-	GetYouTubeEndpoint() string
-}
-
-func NewYouTubeService(config YouTubeConfig) *YouTubeService {
-	return &YouTubeService{
-		apiKey:       config.GetYouTubeApiKEY(),
-		clientID:     config.GetYouTubeClientID(),
-		clientSecret: config.GetYouTubeClientSecret(),
-		scope:        config.GetYouTubeScope(),
-		endpoint:     config.GetYouTubeEndpoint(),
+func NewYouTubeService(api *youtube.YoutubeAPI, tokenStorage storage.Storage[youtube.Credentials], config *youtube.YoutubeConfig) *youtubeService {
+	return &youtubeService{
+		tokenStorage: tokenStorage,
+		config:       config,
+		api:          api,
 	}
 }
 
-func (*YouTubeService) Name() string {
-	return "YouTube"
+func (*youtubeService) Name() string {
+	return "youtube"
 }
 
-func (youtube *YouTubeService) InitCallbackServer(url string) (string, bool) {
-	youtube.redirectURL = url
+func (yt *youtubeService) GetLiked(userID int64) (liked mux.Playlist) {
+	tokens := yt.tokenStorage.Get(userID)
+	videos := yt.api.GetLiked(tokens)
+	for _, video := range videos {
+		liked.Songs = append(liked.Songs, mux.Song{
+			Title:   video.Snippet.Title,
+			Artists: video.Snippet.ChannelTitle,
+		})
+	}
+	return liked
+}
 
-	return youtube.endpoint, true
+// TODO
+func (yt *youtubeService) AddLiked(userID int64, liked mux.Playlist) {
+}
+
+// TODO
+func (yt *youtubeService) GetPlaylists(userID int64) (playlists []mux.Playlist) {
+	return playlists
+}
+
+// TODO
+func (yt *youtubeService) AddPlaylists(userID int64, playlists []mux.Playlist) {
+
 }
