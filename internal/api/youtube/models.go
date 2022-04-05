@@ -27,13 +27,49 @@ type playlistListResponse struct {
 	Items         []Playlist `json:"items"`
 }
 
+type PlaylistItem struct {
+	ID      string  `json:"id"`
+	Snippet snippet `json:"snippet"`
+}
+
+type playlistItemListResponse struct {
+	NextPageToken string         `json:"nextPageToken"`
+	PageInfo      pageInfo       `json:"pageInfo"`
+	Items         []PlaylistItem `json:"items"`
+}
+
+type resourceID struct {
+	VideoID string `json:"videoId"`
+}
+
 type snippet struct {
-	Title        string `json:"title"`
-	ChannelTitle string `json:"channelTitle"`
+	Title                  string     `json:"title"`
+	ChannelTitle           string     `json:"channelTitle"`
+	VideoOwnerChannelTitle string     `json:"videoOwnerChannelTitle"`
+	ResourceID             resourceID `json:"resourceId"`
 }
 
 type Video struct {
+	ID      string  `json:"id"`
 	Snippet snippet `json:"snippet"`
+}
+
+type mergedID struct {
+	Kind       string `json:"kind"`
+	VideoID    string `json:"videoId"`
+	PlaylistID string `json:"playlistId"`
+	ChannelID  string `json:"channelId"`
+}
+
+type SearchResult struct {
+	ID      mergedID `json:"id"`
+	Snippet snippet  `json:"snippet"`
+}
+
+type searchListResponse struct {
+	PageInfo      pageInfo       `json:"pageInfo"`
+	NextPageToken string         `json:"nextPageToken"`
+	Items         []SearchResult `json:"items"`
 }
 
 type videoListResponse struct {

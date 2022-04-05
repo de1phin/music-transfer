@@ -1,8 +1,6 @@
 package spotify
 
 import (
-	"log"
-
 	"github.com/de1phin/music-transfer/internal/api/spotify"
 	spotifyAPI "github.com/de1phin/music-transfer/internal/api/spotify"
 	"github.com/de1phin/music-transfer/internal/mux"
@@ -83,7 +81,6 @@ func (spotify *spotifyService) GetPlaylists(userID int64) (playlists []mux.Playl
 			artists = artists[:len(artists)-1]
 			muxSongs[i].Artists = artists
 		}
-		log.Println("Total tracks:", len(muxSongs))
 		playlists = append(playlists, mux.Playlist{
 			Title: playlist.Name,
 			Songs: muxSongs,

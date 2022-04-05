@@ -1,11 +1,15 @@
 package mux
 
 import (
-	"github.com/de1phin/music-transfer/internal/interactor"
 	"github.com/de1phin/music-transfer/internal/storage"
 )
 
-type Handler func(UserState, interactor.Message) bool
+type Handler func(UserState, Message) bool
+
+type Interactor interface {
+	SendMessage(Message)
+	GetMessage() Message
+}
 
 type Service interface {
 	Name() string
@@ -20,11 +24,11 @@ type Mux struct {
 	services        []Service
 	stateStorage    storage.Storage[UserState]
 	transferStorage storage.Storage[Transfer]
-	interactor      interactor.InteractorSpec
+	interactor      Interactor
 	handlers        []Handler
 }
 
-func NewMux(services []Service, interactor interactor.InteractorSpec, stateStorage storage.Storage[UserState], transferStorage storage.Storage[Transfer]) *Mux {
+func NewMux(services []Service, interactor Interactor, stateStorage storage.Storage[UserState], transferStorage storage.Storage[Transfer]) *Mux {
 	mux := Mux{
 		services:        services,
 		interactor:      interactor,

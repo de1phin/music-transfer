@@ -4,9 +4,8 @@ import (
 	spotifyAPI "github.com/de1phin/music-transfer/internal/api/spotify"
 	youtubeAPI "github.com/de1phin/music-transfer/internal/api/youtube"
 	"github.com/de1phin/music-transfer/internal/config"
-	"github.com/de1phin/music-transfer/internal/interactor"
-	consoleInteractor "github.com/de1phin/music-transfer/internal/interactor/interactors/console"
-	consoleValidator "github.com/de1phin/music-transfer/internal/interactor/validator/console"
+	telegramAdapter "github.com/de1phin/music-transfer/internal/interactor/adapters/telegram"
+	"github.com/de1phin/music-transfer/internal/interactor/interactors/telegram"
 	"github.com/de1phin/music-transfer/internal/mux"
 	"github.com/de1phin/music-transfer/internal/server/callback"
 	"github.com/de1phin/music-transfer/internal/service/mock"
@@ -51,13 +50,15 @@ func main() {
 		mock.NewMockService(),
 	}
 
-	consoleInteractor := consoleInteractor.NewConsoleInteractor(17)
-	consoleValidator := consoleValidator.Validator{}
-	console := interactor.NewInteractorSpec(consoleInteractor, consoleValidator)
+	interactor := telegram.NewTelegramBot(config.GetTelegramToken())
+	adapter := telegramAdapter.NewTelegramAdapter(interactor)
+
+	//interactor := console.NewConsoleInteractor(17)
+	//adapter := consoleAdapter.NewConsoleAdapter(interactor)
 
 	stateStorage := cache.NewCacheStorage[mux.UserState]()
 	transferStorage := cache.NewCacheStorage[mux.Transfer]()
-	mux := mux.NewMux(services, console, stateStorage, transferStorage)
+	mux := mux.NewMux(services, adapter, stateStorage, transferStorage)
 
 	go server.Run()
 	mux.Run()

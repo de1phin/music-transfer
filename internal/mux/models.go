@@ -1,5 +1,10 @@
 package mux
 
+type Message struct {
+	UserID  int64
+	Content string
+}
+
 type UserState int
 
 const (
