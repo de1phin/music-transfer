@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type YoutubeAPI struct {
@@ -92,30 +93,30 @@ func (api *YoutubeAPI) LikeVideo(tokens Credentials, videoID string) {
 	url := "https://www.googleapis.com/youtube/v3/videos/rate?rating=like&id=" + videoID
 	request, _ := http.NewRequest("POST", url, nil)
 	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
-	resp, _ := api.httpClient.Do(request)
-	body, _ := ioutil.ReadAll(resp.Body)
-	log.Println("LikeVideoResponse:", string(body))
+	api.httpClient.Do(request)
 }
 
-func (api *YoutubeAPI) SearchVideos(tokens Credentials, title string, channel string) []SearchResult {
-	url := "https://www.googleapis.com/youtube/v3/search?type=video&part=snippet&q=" + url.QueryEscape(title+" "+channel)
-	request, _ := http.NewRequest("GET", url, nil)
-	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
-	request.Header.Add("Accept", "application/json")
-
-	response, _ := api.httpClient.Do(request)
+func (api *YoutubeAPI) SearchVideo(title string, artists string) string {
+	query := "https://youtube.com/results?search_query=" + strings.Map(func(r rune) rune {
+		if r == ' ' {
+			return '+'
+		} else {
+			return r
+		}
+	}, url.QueryEscape(title+"+"+artists))
+	response, _ := http.Get(query)
 	body, _ := ioutil.ReadAll(response.Body)
-	searchList := searchListResponse{}
-	log.Println("Search:", string(body))
-	json.Unmarshal(body, &searchList)
-
-	return searchList.Items
+	idx := bytes.Index(body, []byte("/watch?v="))
+	idx2 := bytes.Index(body[idx:], []byte("\""))
+	return string(body[idx+9 : idx+idx2])
 }
 
 func (api *YoutubeAPI) CreatePlaylist(tokens Credentials, title string) Playlist {
+	data := `{ "snippet": { "title": "` + title + `" } }`
 	url := "https://www.googleapis.com/youtube/v3/playlists?part=id,snippet"
-	data := []byte(`{"snippet":{"title":` + title + "}}")
-	request, _ := http.NewRequest("POST", url, bytes.NewReader([]byte(data)))
+	log.Println("Create", title)
+	request, _ := http.NewRequest("POST", url, strings.NewReader(data))
+	log.Println("Data:", data)
 	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
 	request.Header.Add("Accept", "application/json")
 	request.Header.Add("Content-Type", "application/json")
@@ -127,4 +128,26 @@ func (api *YoutubeAPI) CreatePlaylist(tokens Credentials, title string) Playlist
 	json.Unmarshal(body, &playlist)
 
 	return playlist
+}
+
+func (api *YoutubeAPI) AddToPlaylist(tokens Credentials, playlistID string, videoID string) {
+	url := "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet"
+	snippets := addVideosRequest{
+		Snippet: snippet{
+			PlaylistID: playlistID,
+			ResourceID: resourceID{
+				Kind:    "youtube#video",
+				VideoID: videoID,
+			},
+		},
+	}
+	data, _ := json.Marshal(snippets)
+
+	request, _ := http.NewRequest("POST", url, bytes.NewReader(data))
+	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
+	request.Header.Add("Content-Type", "application/json")
+	request.Header.Add("Accept", "application/json")
+
+	api.httpClient.Do(request)
+
 }

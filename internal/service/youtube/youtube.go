@@ -1,8 +1,6 @@
 package youtube
 
 import (
-	"log"
-
 	"github.com/de1phin/music-transfer/internal/api/youtube"
 	"github.com/de1phin/music-transfer/internal/mux"
 	"github.com/de1phin/music-transfer/internal/storage"
@@ -30,31 +28,22 @@ func (yt *youtubeService) GetLiked(userID int64) (liked mux.Playlist) {
 	tokens := yt.tokenStorage.Get(userID)
 	videos := yt.api.GetLiked(tokens)
 	for _, video := range videos {
-		properVideo := yt.api.SearchVideos(tokens, video.Snippet.Title, video.Snippet.VideoOwnerChannelTitle)
-		if len(properVideo) == 0 {
-			continue
-		}
 		liked.Songs = append(liked.Songs, mux.Song{
-			Title:   properVideo[0].Snippet.Title,
-			Artists: properVideo[0].Snippet.VideoOwnerChannelTitle,
+			Title:   video.Snippet.Title,
+			Artists: video.Snippet.VideoOwnerChannelTitle,
 		})
 	}
 	return liked
 }
 
-// TODO
 func (yt *youtubeService) AddLiked(userID int64, liked mux.Playlist) {
-	tokens := yt.tokenStorage.Get(userID)
+	/*tokens := yt.tokenStorage.Get(userID)
 	for _, song := range liked.Songs {
-		search := yt.api.SearchVideos(tokens, song.Title, song.Artists)
-		if len(search) == 0 {
-			continue
-		}
-		yt.api.LikeVideo(tokens, search[0].ID.VideoID)
-	}
+		videoID := yt.api.SearchVideo(song.Title, song.Artists)
+		yt.api.LikeVideo(tokens, videoID)
+	}*/
 }
 
-// TODO
 func (yt *youtubeService) GetPlaylists(userID int64) (playlists []mux.Playlist) {
 	tokens := yt.tokenStorage.Get(userID)
 	ytplaylists := yt.api.GetUserPlaylists(tokens)
@@ -76,22 +65,27 @@ func (yt *youtubeService) GetPlaylists(userID int64) (playlists []mux.Playlist) 
 	return playlists
 }
 
-// TODO
 func (yt *youtubeService) AddPlaylists(userID int64, playlists []mux.Playlist) {
 	tokens := yt.tokenStorage.Get(userID)
 	userPlaylists := yt.api.GetUserPlaylists(tokens)
 	for _, playlist := range playlists {
 		exist := false
+		playlistID := ""
 		for _, up := range userPlaylists {
 			if playlist.Title == up.Snippet.Title {
 				exist = true
+				playlistID = up.ID
 				break
 			}
 		}
 
 		if !exist {
-			log.Println("Create playlist", playlist.Title)
-			yt.api.CreatePlaylist(tokens, playlist.Title)
+			playlistID = yt.api.CreatePlaylist(tokens, playlist.Title).ID
+		}
+
+		for _, v := range playlist.Songs {
+			videoID := yt.api.SearchVideo(v.Title, v.Artists)
+			yt.api.AddToPlaylist(tokens, playlistID, videoID)
 		}
 	}
 }

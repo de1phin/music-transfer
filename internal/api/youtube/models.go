@@ -39,10 +39,16 @@ type playlistItemListResponse struct {
 }
 
 type resourceID struct {
+	Kind    string `json:"kind"`
 	VideoID string `json:"videoId"`
 }
 
+type addVideosRequest struct {
+	Snippet snippet `json:"snippet"`
+}
+
 type snippet struct {
+	PlaylistID             string     `json:"playlistId"`
 	Title                  string     `json:"title"`
 	ChannelTitle           string     `json:"channelTitle"`
 	VideoOwnerChannelTitle string     `json:"videoOwnerChannelTitle"`

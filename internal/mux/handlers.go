@@ -110,6 +110,13 @@ func (mux *Mux) HandleChoosingDst(state UserState, msg Message) bool {
 	for _, service := range mux.services {
 		if service.Name() == msg.Content {
 			mux.stateStorage.Put(msg.UserID, Idle)
+			/*if service.Name() == "youtube" {
+				mux.interactor.SendMessage(Message{
+					UserID:  msg.UserID,
+					Content: "<content><text>Transfering to Youtube is temporarily unavailable</text></content>",
+				})
+				return true
+			}*/
 			src := mux.transferStorage.Get(msg.UserID)
 			mux.interactor.SendMessage(Message{
 				UserID:  msg.UserID,
