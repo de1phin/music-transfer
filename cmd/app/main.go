@@ -25,11 +25,11 @@ func main() {
 			Secret: config.GetSpotifyClientSecret(),
 		},
 	}
-	server := callback.NewCallbackServer(config.GetServerURL())
+	server := callback.NewCallbackServer(config.GetServerHostname())
 
 	spotifyStorage := cache.NewCacheStorage[spotifyAPI.Credentials]()
-	spotifyAPI := spotifyAPI.NewSpotifyAPI(spotifyConfig.Client, config.GetCallbackURL())
-	spotify := spotify.NewSpotifyService(spotifyConfig, config.GetCallbackURL(), spotifyAPI, spotifyStorage)
+	spotifyAPI := spotifyAPI.NewSpotifyAPI(spotifyConfig.Client, config.GetServerHostname())
+	spotify := spotify.NewSpotifyService(spotifyConfig, config.GetServerHostname(), spotifyAPI, spotifyStorage)
 	spotifyAPI.BindHandler(server.ServeMux, spotify.OnGetTokens)
 
 	youtubeStorage := cache.NewCacheStorage[youtubeAPI.Credentials]()
@@ -38,7 +38,7 @@ func main() {
 		ClientID:     config.GetYouTubeClientID(),
 		ClientSecret: config.GetYouTubeClientSecret(),
 		Scopes:       config.GetYouTubeScope(),
-		RedirectURI:  config.GetCallbackURL() + "/youtube",
+		RedirectURI:  "http://" + config.GetServerHostname() + "/youtube",
 	}
 	youtubeAPI := youtubeAPI.NewYoutubeAPI(&youtubeConfig)
 	youtube := youtube.NewYouTubeService(youtubeAPI, youtubeStorage, &youtubeConfig)

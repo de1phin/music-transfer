@@ -13,3 +13,8 @@ func (yt *youtubeService) GetAuthURL(userID int64) string {
 func (yt *youtubeService) OnGetTokens(userID int64, tokens youtube.Credentials) {
 	yt.tokenStorage.Put(userID, tokens)
 }
+
+func (yt *youtubeService) Authorized(userID int64) bool {
+	tokens := yt.tokenStorage.Get(userID)
+	return yt.api.Authorized(tokens)
+}

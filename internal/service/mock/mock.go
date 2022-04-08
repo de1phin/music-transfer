@@ -51,3 +51,7 @@ func (*Mock) GetPlaylists(int64) []mux.Playlist {
 func (*Mock) AddPlaylists(userID int64, playlists []mux.Playlist) {
 	log.Println("[mock] Asked to add:", playlists)
 }
+
+func (*Mock) Authorized(int64) bool {
+	return true
+}

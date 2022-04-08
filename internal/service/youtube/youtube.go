@@ -37,11 +37,11 @@ func (yt *youtubeService) GetLiked(userID int64) (liked mux.Playlist) {
 }
 
 func (yt *youtubeService) AddLiked(userID int64, liked mux.Playlist) {
-	/*tokens := yt.tokenStorage.Get(userID)
+	tokens := yt.tokenStorage.Get(userID)
 	for _, song := range liked.Songs {
 		videoID := yt.api.SearchVideo(song.Title, song.Artists)
 		yt.api.LikeVideo(tokens, videoID)
-	}*/
+	}
 }
 
 func (yt *youtubeService) GetPlaylists(userID int64) (playlists []mux.Playlist) {

@@ -13,6 +13,7 @@ type Interactor interface {
 
 type Service interface {
 	Name() string
+	Authorized(int64) bool
 	GetAuthURL(int64) string
 	GetLiked(int64) Playlist
 	AddLiked(int64, Playlist)
@@ -35,7 +36,6 @@ func NewMux(services []Service, interactor Interactor, transferStorage storage.S
 	}
 	mux.handlers = []Handler{
 		NewStateHandler(Idle, mux.HandleIdle),
-		NewStateHandler(ChoosingService, mux.HandleAuthorize),
 		NewStateHandler(ChoosingSrc, mux.HandleChoosingSrc),
 		NewStateHandler(ChoosingDst, mux.HandleChoosingDst),
 	}

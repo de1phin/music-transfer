@@ -201,3 +201,10 @@ func (api *SpotifyAPI) AddToPlaylist(tokens Credentials, playlistID string, trac
 		api.httpClient.Do(request)
 	}
 }
+
+func (api *SpotifyAPI) Authorized(tokens Credentials) bool {
+	request, _ := http.NewRequest("GET", "https://api.spotify.com/v1/me", nil)
+	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
+	response, _ := api.httpClient.Do(request)
+	return response.StatusCode != 400
+}

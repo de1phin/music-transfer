@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -18,6 +19,7 @@ func (api *YoutubeAPI) BindHandler(router *http.ServeMux, onGetTokens OnGetToken
 
 func (api *YoutubeAPI) callbackHandler(onGetTokens OnGetTokens) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		log.Println("oh, got something")
 		m, _ := url.ParseQuery(r.URL.RawQuery)
 		userID, _ := strconv.ParseInt(m["state"][0], 10, 64)
 

@@ -1,6 +1,8 @@
 package callback
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type CallbackServer struct {
 	HostName string

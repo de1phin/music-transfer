@@ -8,11 +8,12 @@ type Message struct {
 	Content   string
 }
 
+type Transfer Service
+
 type UserState int
 
 const (
 	Idle UserState = iota
-	ChoosingService
 	ChoosingSrc
 	ChoosingDst
 )
@@ -35,8 +36,6 @@ type Content struct {
 	Button  []string `xml:"button"`
 	Either  []Either `xml:"either"`
 }
-
-type Transfer Service
 
 type Song struct {
 	Title   string

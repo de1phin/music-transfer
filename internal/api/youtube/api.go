@@ -89,7 +89,6 @@ func (api *YoutubeAPI) GetPlaylistContent(tokens Credentials, playlistID string)
 }
 
 func (api *YoutubeAPI) LikeVideo(tokens Credentials, videoID string) {
-	log.Println("VideoID =", videoID)
 	url := "https://www.googleapis.com/youtube/v3/videos/rate?rating=like&id=" + videoID
 	request, _ := http.NewRequest("POST", url, nil)
 	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
@@ -150,4 +149,13 @@ func (api *YoutubeAPI) AddToPlaylist(tokens Credentials, playlistID string, vide
 
 	api.httpClient.Do(request)
 
+}
+
+func (api *YoutubeAPI) Authorized(tokens Credentials) bool {
+	url := "https://www.googleapis.com/youtube/v3/channels?part=id&mine=true&key=" + api.config.APIKey
+	request, _ := http.NewRequest("GET", url, nil)
+	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
+
+	response, _ := api.httpClient.Do(request)
+	return response.StatusCode != 401
 }
