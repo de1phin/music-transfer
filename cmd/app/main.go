@@ -1,10 +1,14 @@
 package main
 
 import (
+	"os"
+
 	spotifyAPI "github.com/de1phin/music-transfer/internal/api/spotify"
 	youtubeAPI "github.com/de1phin/music-transfer/internal/api/youtube"
 	"github.com/de1phin/music-transfer/internal/config"
+	consoleAdapter "github.com/de1phin/music-transfer/internal/interactor/adapters/console"
 	telegramAdapter "github.com/de1phin/music-transfer/internal/interactor/adapters/telegram"
+	"github.com/de1phin/music-transfer/internal/interactor/interactors/console"
 	"github.com/de1phin/music-transfer/internal/interactor/interactors/telegram"
 	"github.com/de1phin/music-transfer/internal/mux"
 	"github.com/de1phin/music-transfer/internal/server/callback"
@@ -27,12 +31,12 @@ func main() {
 	}
 	server := callback.NewCallbackServer(config.GetServerHostname())
 
-	spotifyStorage := cache.NewCacheStorage[spotifyAPI.Credentials]()
-	spotifyAPI := spotifyAPI.NewSpotifyAPI(spotifyConfig.Client, config.GetServerHostname())
-	spotify := spotify.NewSpotifyService(spotifyConfig, config.GetServerHostname(), spotifyAPI, spotifyStorage)
+	spotifyStorage := cache.NewCacheStorage[int64, spotifyAPI.Credentials]()
+	spotifyAPI := spotifyAPI.NewSpotifyAPI(spotifyConfig.Client, "http://"+config.GetServerHostname())
+	spotify := spotify.NewSpotifyService(spotifyConfig, "http://"+config.GetServerHostname(), spotifyAPI, spotifyStorage)
 	spotifyAPI.BindHandler(server.ServeMux, spotify.OnGetTokens)
 
-	youtubeStorage := cache.NewCacheStorage[youtubeAPI.Credentials]()
+	youtubeStorage := cache.NewCacheStorage[int64, youtubeAPI.Credentials]()
 	youtubeConfig := youtubeAPI.YoutubeConfig{
 		APIKey:       config.GetYouTubeApiKEY(),
 		ClientID:     config.GetYouTubeClientID(),
@@ -50,18 +54,29 @@ func main() {
 		mock.NewMockService(),
 	}
 
-	userStateStorage := cache.NewCacheStorage[mux.UserState]()
+	userStateStorage := cache.NewCacheStorage[int64, mux.UserState]()
 
-	interactor := telegram.NewTelegramBot(config.GetTelegramToken())
-	adapter := telegramAdapter.NewTelegramAdapter(interactor, userStateStorage)
+	telegram := telegram.NewTelegramBot(config.GetTelegramToken())
+	telegramAdapter := telegramAdapter.NewTelegramAdapter(telegram, userStateStorage)
 
-	//interactor := console.NewConsoleInteractor()
-	//adapter := consoleAdapter.NewConsoleAdapter(interactor, 17)
+	console := console.NewConsoleInteractor()
+	consoleAdapter := consoleAdapter.NewConsoleAdapter(console, 17)
 
-	transferStorage := cache.NewCacheStorage[mux.Transfer]()
-	mux := mux.NewMux(services, adapter, transferStorage)
+	transferStorage := cache.NewCacheStorage[int64, mux.Transfer]()
+	idStorage := cache.NewCacheStorage[string, int64]()
+
+	interactors := []mux.Interactor{
+		telegramAdapter,
+		consoleAdapter,
+	}
+	mux := mux.NewMux(services, interactors, transferStorage, idStorage)
 
 	go server.Run()
-	mux.Run()
 
+	muxQuit := make(chan struct{})
+	mux.Run(muxQuit)
+
+	c := make(chan os.Signal)
+	<-c
+	muxQuit <- struct{}{}
 }

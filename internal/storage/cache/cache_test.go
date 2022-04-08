@@ -7,7 +7,7 @@ import (
 )
 
 func TestCache(t *testing.T) {
-	cache := cache.NewCacheStorage[int]()
+	cache := cache.NewCacheStorage[int64, int]()
 	cache.Put(3, 10)
 	if cache.Get(3) != 10 {
 		t.Fatal("cache.Get(3): Expected 10, got", cache.Get(3))

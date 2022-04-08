@@ -17,10 +17,10 @@ type spotifyService struct {
 	client       spotify.Client
 	api          *spotify.SpotifyAPI
 	redirectURI  string
-	tokenStorage storage.Storage[spotify.Credentials]
+	tokenStorage storage.Storage[int64, spotify.Credentials]
 }
 
-func NewSpotifyService(config SpotifyConfig, redirectURI string, spotifyAPI *spotify.SpotifyAPI, tokenStorage storage.Storage[spotify.Credentials]) *spotifyService {
+func NewSpotifyService(config SpotifyConfig, redirectURI string, spotifyAPI *spotify.SpotifyAPI, tokenStorage storage.Storage[int64, spotify.Credentials]) *spotifyService {
 	return &spotifyService{
 		scopes:       config.Scopes,
 		client:       config.Client,

@@ -7,12 +7,12 @@ import (
 )
 
 type youtubeService struct {
-	tokenStorage storage.Storage[youtube.Credentials]
+	tokenStorage storage.Storage[int64, youtube.Credentials]
 	config       *youtube.YoutubeConfig
 	api          *youtube.YoutubeAPI
 }
 
-func NewYouTubeService(api *youtube.YoutubeAPI, tokenStorage storage.Storage[youtube.Credentials], config *youtube.YoutubeConfig) *youtubeService {
+func NewYouTubeService(api *youtube.YoutubeAPI, tokenStorage storage.Storage[int64, youtube.Credentials], config *youtube.YoutubeConfig) *youtubeService {
 	return &youtubeService{
 		tokenStorage: tokenStorage,
 		config:       config,

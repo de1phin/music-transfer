@@ -2,6 +2,7 @@ package spotify
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/de1phin/music-transfer/internal/api/spotify"
 )
@@ -18,6 +19,7 @@ func (ss *spotifyService) GetAuthURL(userID int64) string {
 }
 
 func (ss *spotifyService) OnGetTokens(userID int64, tokens spotify.Credentials) {
+	log.Println("PUT", userID, tokens)
 	ss.tokenStorage.Put(userID, tokens)
 }
 

@@ -2,6 +2,7 @@ package mux
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"time"
 )
@@ -13,15 +14,15 @@ type StateHandler struct {
 
 func NewStateHandler(state UserState, handler Handler) Handler {
 	stateHandler := &StateHandler{state: state, handler: handler}
-	return func(from Interactor, msg Message) bool {
+	return func(from Interactor, msg Message, internalID int64) bool {
 		if msg.UserState != stateHandler.state {
 			return false
 		}
-		return stateHandler.handler(from, msg)
+		return stateHandler.handler(from, msg, internalID)
 	}
 }
 
-func (mux *Mux) HandleIdle(from Interactor, msg Message) bool {
+func (mux *Mux) HandleIdle(from Interactor, msg Message, internalID int64) bool {
 	services := ""
 	for _, service := range mux.services {
 		services += fmt.Sprintf(`
@@ -40,28 +41,29 @@ func (mux *Mux) HandleIdle(from Interactor, msg Message) bool {
 	return true
 }
 
-func (mux *Mux) HandleChoosingSrc(from Interactor, msg Message) bool {
+func (mux *Mux) HandleChoosingSrc(from Interactor, msg Message, internalID int64) bool {
 	for _, service := range mux.services {
 		if service.Name() == msg.Content {
-			if !service.Authorized(msg.UserID) {
+			if !service.Authorized(internalID) {
 				from.SendMessage(Message{
 					UserID:    msg.UserID,
 					UserState: ChoosingDst,
 					Content: "<content><text>Please log into the service:</text><url><text>" +
-						strings.Title(service.Name()) + "</text><link><![CDATA[" + service.GetAuthURL(msg.UserID) +
+						strings.Title(service.Name()) + "</text><link><![CDATA[" + service.GetAuthURL(internalID) +
 						"]]></link></url></content>",
 				})
-
+				log.Println("wait for", internalID)
 				timeLimit := time.Now().Add(time.Second * 60)
-				for !service.Authorized(msg.UserID) {
+				for !service.Authorized(internalID) {
 					time.Sleep(3 * time.Second)
 					if timeLimit.Before(time.Now()) {
 						return true
 					}
 				}
+				log.Println("stop")
 			}
 
-			mux.transferStorage.Put(msg.UserID, service)
+			mux.transferStorage.Put(internalID, service)
 			services := ""
 			for _, service := range mux.services {
 				services += fmt.Sprintf(`
@@ -88,20 +90,20 @@ func (mux *Mux) HandleChoosingSrc(from Interactor, msg Message) bool {
 	return true
 }
 
-func (mux *Mux) HandleChoosingDst(from Interactor, msg Message) bool {
+func (mux *Mux) HandleChoosingDst(from Interactor, msg Message, internalID int64) bool {
 	for _, service := range mux.services {
 		if service.Name() == msg.Content {
-			if !service.Authorized(msg.UserID) {
+			if !service.Authorized(internalID) {
 				from.SendMessage(Message{
 					UserID:    msg.UserID,
 					UserState: Idle,
 					Content: "<content><text>Please log into the service:</text><url><text>" +
-						strings.Title(service.Name()) + "</text><link><![CDATA[" + service.GetAuthURL(msg.UserID) +
+						strings.Title(service.Name()) + "</text><link><![CDATA[" + service.GetAuthURL(internalID) +
 						"]]></link></url></content>",
 				})
 
 				timeLimit := time.Now().Add(time.Second * 60)
-				for !service.Authorized(msg.UserID) {
+				for !service.Authorized(internalID) {
 					time.Sleep(3 * time.Second)
 					if timeLimit.Before(time.Now()) {
 						return true
@@ -109,7 +111,7 @@ func (mux *Mux) HandleChoosingDst(from Interactor, msg Message) bool {
 				}
 			}
 
-			src := mux.transferStorage.Get(msg.UserID)
+			src := mux.transferStorage.Get(internalID)
 
 			from.SendMessage(Message{
 				UserID:    msg.UserID,
@@ -118,8 +120,8 @@ func (mux *Mux) HandleChoosingDst(from Interactor, msg Message) bool {
 					" to " + strings.Title(service.Name()) + "</text></content>",
 			})
 
-			service.AddLiked(msg.UserID, src.GetLiked(msg.UserID))
-			service.AddPlaylists(msg.UserID, src.GetPlaylists(msg.UserID))
+			service.AddLiked(internalID, src.GetLiked(internalID))
+			service.AddPlaylists(internalID, src.GetPlaylists(internalID))
 
 			return true
 		}

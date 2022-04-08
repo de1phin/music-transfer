@@ -22,6 +22,10 @@ func NewConsoleAdapter(console *console.ConsoleInteractor, defaultUserID int64) 
 	}
 }
 
+func (*ConsoleAdapter) Name() string {
+	return "console"
+}
+
 func (ca *ConsoleAdapter) GetMessage() mux.Message {
 	text := ca.console.GetMessage()
 	msg := mux.Message{

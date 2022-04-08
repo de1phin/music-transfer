@@ -12,14 +12,18 @@ import (
 
 type TelegramAdapter struct {
 	Telegram         *telegram.TelegramBot
-	userStateStorage storage.Storage[mux.UserState]
+	userStateStorage storage.Storage[int64, mux.UserState]
 }
 
-func NewTelegramAdapter(tg *telegram.TelegramBot, userStateStorage storage.Storage[mux.UserState]) *TelegramAdapter {
+func NewTelegramAdapter(tg *telegram.TelegramBot, userStateStorage storage.Storage[int64, mux.UserState]) *TelegramAdapter {
 	return &TelegramAdapter{
 		Telegram:         tg,
 		userStateStorage: userStateStorage,
 	}
+}
+
+func (*TelegramAdapter) Name() string {
+	return "telegram"
 }
 
 func parseUserState(str string) (error, mux.UserState) {

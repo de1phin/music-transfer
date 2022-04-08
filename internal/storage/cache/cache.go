@@ -4,32 +4,32 @@ import (
 	"sync"
 )
 
-type cacheStorage[T any] struct {
+type cacheStorage[Key comparable, T any] struct {
 	// TODO: RWMutex
 	sync.Mutex
-	storage map[int64]T
+	storage map[Key]T
 }
 
-func NewCacheStorage[T any]() *cacheStorage[T] {
-	var cache cacheStorage[T]
-	cache.storage = make(map[int64]T)
+func NewCacheStorage[Key comparable, T any]() *cacheStorage[Key, T] {
+	var cache cacheStorage[Key, T]
+	cache.storage = make(map[Key]T)
 	return &cache
 }
 
-func (cs *cacheStorage[T]) Exist(id int64) bool {
+func (cs *cacheStorage[Key, T]) Exist(id Key) bool {
 	cs.Lock()
 	defer cs.Unlock()
 	_, ok := cs.storage[id]
 	return ok
 }
 
-func (cs *cacheStorage[T]) Get(id int64) T {
+func (cs *cacheStorage[Key, T]) Get(id Key) T {
 	cs.Lock()
 	defer cs.Unlock()
 	return cs.storage[id]
 }
 
-func (cs *cacheStorage[T]) Put(id int64, data T) {
+func (cs *cacheStorage[Key, T]) Put(id Key, data T) {
 	cs.Lock()
 	defer cs.Unlock()
 	cs.storage[id] = data
