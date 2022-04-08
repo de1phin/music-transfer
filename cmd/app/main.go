@@ -50,15 +50,16 @@ func main() {
 		mock.NewMockService(),
 	}
 
+	userStateStorage := cache.NewCacheStorage[mux.UserState]()
+
 	interactor := telegram.NewTelegramBot(config.GetTelegramToken())
-	adapter := telegramAdapter.NewTelegramAdapter(interactor)
+	adapter := telegramAdapter.NewTelegramAdapter(interactor, userStateStorage)
 
-	//interactor := console.NewConsoleInteractor(17)
-	//adapter := consoleAdapter.NewConsoleAdapter(interactor)
+	//interactor := console.NewConsoleInteractor()
+	//adapter := consoleAdapter.NewConsoleAdapter(interactor, 17)
 
-	stateStorage := cache.NewCacheStorage[mux.UserState]()
 	transferStorage := cache.NewCacheStorage[mux.Transfer]()
-	mux := mux.NewMux(services, adapter, stateStorage, transferStorage)
+	mux := mux.NewMux(services, adapter, transferStorage)
 
 	go server.Run()
 	mux.Run()

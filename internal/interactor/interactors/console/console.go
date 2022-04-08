@@ -3,29 +3,25 @@ package console
 import (
 	"bufio"
 	"os"
-
-	"github.com/de1phin/music-transfer/internal/mux"
 )
 
 type ConsoleInteractor struct {
-	readWriter    *bufio.ReadWriter
-	defaultUserID int64
+	readWriter *bufio.ReadWriter
 }
 
-func NewConsoleInteractor(defaultUserID int64) *ConsoleInteractor {
+func NewConsoleInteractor() *ConsoleInteractor {
 	console := ConsoleInteractor{
 		bufio.NewReadWriter(bufio.NewReader(os.Stdin), bufio.NewWriter(os.Stdout)),
-		defaultUserID,
 	}
 	return &console
 }
 
-func (console *ConsoleInteractor) GetMessage() mux.Message {
+func (console *ConsoleInteractor) GetMessage() string {
 	msg, _ := console.readWriter.ReadString('\n')
-	return mux.Message{UserID: console.defaultUserID, Content: msg}
+	return msg
 }
 
-func (console *ConsoleInteractor) SendMessage(msg mux.Message) {
-	console.readWriter.WriteString(msg.Content)
+func (console *ConsoleInteractor) SendMessage(msg string) {
+	console.readWriter.WriteString(msg)
 	console.readWriter.Flush()
 }

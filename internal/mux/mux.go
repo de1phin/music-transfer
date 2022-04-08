@@ -4,7 +4,7 @@ import (
 	"github.com/de1phin/music-transfer/internal/storage"
 )
 
-type Handler func(UserState, Message) bool
+type Handler func(Interactor, Message) bool
 
 type Interactor interface {
 	SendMessage(Message)
@@ -22,17 +22,15 @@ type Service interface {
 
 type Mux struct {
 	services        []Service
-	stateStorage    storage.Storage[UserState]
 	transferStorage storage.Storage[Transfer]
 	interactor      Interactor
 	handlers        []Handler
 }
 
-func NewMux(services []Service, interactor Interactor, stateStorage storage.Storage[UserState], transferStorage storage.Storage[Transfer]) *Mux {
+func NewMux(services []Service, interactor Interactor, transferStorage storage.Storage[Transfer]) *Mux {
 	mux := Mux{
 		services:        services,
 		interactor:      interactor,
-		stateStorage:    stateStorage,
 		transferStorage: transferStorage,
 	}
 	mux.handlers = []Handler{
@@ -47,15 +45,9 @@ func NewMux(services []Service, interactor Interactor, stateStorage storage.Stor
 func (mux *Mux) Run() {
 	for {
 		msg := mux.interactor.GetMessage()
-		userState := Idle
-		if !mux.stateStorage.Exist(msg.UserID) {
-			mux.stateStorage.Put(msg.UserID, Idle)
-		} else {
-			userState = mux.stateStorage.Get(msg.UserID)
-		}
 
 		for _, handler := range mux.handlers {
-			if handler(userState, msg) {
+			if handler(mux.interactor, msg) {
 				break
 			}
 		}

@@ -1,13 +1,26 @@
 package telegram
 
 import (
-	"github.com/de1phin/music-transfer/internal/mux"
+	"fmt"
+	"strings"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type TelegramBot struct {
 	bot     *tgbotapi.BotAPI
 	updates tgbotapi.UpdatesChannel
+}
+
+type Message struct {
+	Text   string
+	ChatID int64
+	Data   string
+}
+
+type Button struct {
+	Text string
+	Data string
 }
 
 func NewTelegramBot(token string) *TelegramBot {
@@ -26,30 +39,32 @@ func NewTelegramBot(token string) *TelegramBot {
 	return &tg
 }
 
-func (tg *TelegramBot) GetMessage() mux.Message {
+func (tg *TelegramBot) GetMessage() Message {
 	upd := <-tg.updates
 	if upd.Message == nil {
-		tg.bot.Send(tgbotapi.NewMessage(upd.CallbackQuery.Message.Chat.ID, ""))
-		return mux.Message{
-			UserID:  upd.CallbackQuery.Message.Chat.ID,
-			Content: upd.CallbackQuery.Data,
+		data := strings.Split(upd.CallbackQuery.Data, ":::")
+		return Message{
+			Text:   data[0],
+			ChatID: upd.CallbackQuery.Message.Chat.ID,
+			Data:   data[1],
 		}
 	} else {
-		return mux.Message{
-			Content: upd.Message.Text,
-			UserID:  upd.Message.Chat.ID,
+		return Message{
+			Text:   upd.Message.Text,
+			ChatID: upd.Message.Chat.ID,
+			Data:   "",
 		}
 	}
 }
 
-func (tg *TelegramBot) SendMessage(chatID int64, text string, buttons []mux.Button, urls []mux.URL) {
-
+func (tg *TelegramBot) SendMessage(chatID int64, text string, buttons []Button, urls []Button) {
 	keyboardRows := make([]tgbotapi.InlineKeyboardButton, 0)
 	for _, button := range buttons {
-		keyboardRows = append(keyboardRows, tgbotapi.NewInlineKeyboardButtonData(button.Text, button.Metadata))
+		data := fmt.Sprintf("%s:::%s", button.Text, button.Data)
+		keyboardRows = append(keyboardRows, tgbotapi.NewInlineKeyboardButtonData(button.Text, data))
 	}
 	for _, url := range urls {
-		keyboardRows = append(keyboardRows, tgbotapi.NewInlineKeyboardButtonURL(url.Text, url.Link))
+		keyboardRows = append(keyboardRows, tgbotapi.NewInlineKeyboardButtonURL(url.Text, url.Data))
 	}
 
 	msg := tgbotapi.NewMessage(chatID, text)

@@ -9,22 +9,31 @@ import (
 )
 
 type ConsoleAdapter struct {
-	console *console.ConsoleInteractor
+	console       *console.ConsoleInteractor
+	defaultUserID int64
+	userState     mux.UserState
 }
 
-func NewConsoleAdapter(console *console.ConsoleInteractor) *ConsoleAdapter {
+func NewConsoleAdapter(console *console.ConsoleInteractor, defaultUserID int64) *ConsoleAdapter {
 	return &ConsoleAdapter{
-		console: console,
+		console:       console,
+		defaultUserID: defaultUserID,
+		userState:     mux.Idle,
 	}
 }
 
 func (ca *ConsoleAdapter) GetMessage() mux.Message {
-	msg := ca.console.GetMessage()
-	msg.Content = strings.ToLower(strings.Trim(msg.Content, " \n\r\t"))
+	text := ca.console.GetMessage()
+	msg := mux.Message{
+		UserID:    ca.defaultUserID,
+		UserState: ca.userState,
+		Content:   strings.ToLower(strings.Trim(text, " \n\r\t")),
+	}
 	return msg
 }
 
 func (ca *ConsoleAdapter) SendMessage(msg mux.Message) {
+	ca.userState = msg.UserState
 	content := mux.Content{}
 	xml.Unmarshal([]byte(msg.Content), &content)
 	text := ""
@@ -44,6 +53,5 @@ func (ca *ConsoleAdapter) SendMessage(msg mux.Message) {
 			text += i.URL.Link + "\n"
 		}
 	}
-	msg.Content = text
-	ca.console.SendMessage(msg)
+	ca.console.SendMessage(text)
 }
