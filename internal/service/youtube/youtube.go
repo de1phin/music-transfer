@@ -24,31 +24,49 @@ func (*youtubeService) Name() string {
 	return "youtube"
 }
 
-func (yt *youtubeService) GetLiked(userID int64) (liked mux.Playlist) {
+func (yt *youtubeService) GetLiked(userID int64) (mux.Playlist, error) {
 	tokens := yt.tokenStorage.Get(userID)
-	videos := yt.api.GetLiked(tokens)
+	videos, err := yt.api.GetLiked(tokens)
+	if err != nil {
+		return mux.Playlist{}, err
+	}
+	liked := mux.Playlist{}
 	for _, video := range videos {
 		liked.Songs = append(liked.Songs, mux.Song{
 			Title:   video.Snippet.Title,
 			Artists: video.Snippet.VideoOwnerChannelTitle,
 		})
 	}
-	return liked
+	return liked, nil
 }
 
-func (yt *youtubeService) AddLiked(userID int64, liked mux.Playlist) {
+func (yt *youtubeService) AddLiked(userID int64, liked mux.Playlist) error {
 	tokens := yt.tokenStorage.Get(userID)
 	for _, song := range liked.Songs {
-		videoID := yt.api.SearchVideo(song.Title, song.Artists)
-		yt.api.LikeVideo(tokens, videoID)
+		videoID, err := yt.api.SearchVideo(song.Title, song.Artists)
+		if err != nil {
+			return err
+		}
+		err = yt.api.LikeVideo(tokens, videoID)
+		if err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
-func (yt *youtubeService) GetPlaylists(userID int64) (playlists []mux.Playlist) {
+func (yt *youtubeService) GetPlaylists(userID int64) ([]mux.Playlist, error) {
 	tokens := yt.tokenStorage.Get(userID)
-	ytplaylists := yt.api.GetUserPlaylists(tokens)
+	playlists := []mux.Playlist{}
+	ytplaylists, err := yt.api.GetUserPlaylists(tokens)
+	if err != nil {
+		return nil, err
+	}
 	for _, playlist := range ytplaylists {
-		videos := yt.api.GetPlaylistContent(tokens, playlist.ID)
+		videos, err := yt.api.GetPlaylistContent(tokens, playlist.ID)
+		if err != nil {
+			return nil, err
+		}
 		songs := make([]mux.Song, len(videos))
 		for i := range videos {
 			songs[i] = mux.Song{
@@ -62,12 +80,15 @@ func (yt *youtubeService) GetPlaylists(userID int64) (playlists []mux.Playlist) 
 		})
 	}
 
-	return playlists
+	return playlists, nil
 }
 
-func (yt *youtubeService) AddPlaylists(userID int64, playlists []mux.Playlist) {
+func (yt *youtubeService) AddPlaylists(userID int64, playlists []mux.Playlist) error {
 	tokens := yt.tokenStorage.Get(userID)
-	userPlaylists := yt.api.GetUserPlaylists(tokens)
+	userPlaylists, err := yt.api.GetUserPlaylists(tokens)
+	if err != nil {
+		return err
+	}
 	for _, playlist := range playlists {
 		exist := false
 		playlistID := ""
@@ -80,12 +101,20 @@ func (yt *youtubeService) AddPlaylists(userID int64, playlists []mux.Playlist) {
 		}
 
 		if !exist {
-			playlistID = yt.api.CreatePlaylist(tokens, playlist.Title).ID
+			playlist, err := yt.api.CreatePlaylist(tokens, playlist.Title)
+			if err != nil {
+				return err
+			}
+			playlistID = playlist.ID
 		}
 
 		for _, v := range playlist.Songs {
-			videoID := yt.api.SearchVideo(v.Title, v.Artists)
+			videoID, err := yt.api.SearchVideo(v.Title, v.Artists)
+			if err != nil {
+				return err
+			}
 			yt.api.AddToPlaylist(tokens, playlistID, videoID)
 		}
 	}
+	return nil
 }

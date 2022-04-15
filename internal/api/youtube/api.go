@@ -3,6 +3,7 @@ package youtube
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -23,17 +24,31 @@ func NewYoutubeAPI(config *YoutubeConfig) *YoutubeAPI {
 	}
 }
 
-func (api *YoutubeAPI) GetLiked(tokens Credentials) (videos []Video) {
+func (api *YoutubeAPI) GetLiked(tokens Credentials) ([]Video, error) {
 	limit := 50
 
 	url := fmt.Sprintf("https://www.googleapis.com/youtube/v3/videos?myRating=like&part=id,snippet&maxResults=%d", limit)
 
+	videos := []Video{}
+
 	for {
-		request, _ := http.NewRequest("GET", url, nil)
+		request, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return videos, err
+		}
 		request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
 
-		response, _ := api.httpClient.Do(request)
-		body, _ := ioutil.ReadAll(response.Body)
+		response, err := api.httpClient.Do(request)
+		if err != nil {
+			return videos, err
+		}
+		if response.StatusCode != 200 {
+			return videos, errors.New("YoutubeAPI.GetLiked Error: Response Status: " + response.Status)
+		}
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return videos, err
+		}
 
 		videoList := videoListResponse{}
 		json.Unmarshal(body, &videoList)
@@ -47,33 +62,59 @@ func (api *YoutubeAPI) GetLiked(tokens Credentials) (videos []Video) {
 		url = fmt.Sprintf("https://www.googleapis.com/youtube/v3/videos?myRating=like&part=id,snippet&maxResults=%d&pageToken=%s", limit, videoList.NextPageToken)
 	}
 
-	return videos
+	return videos, nil
 }
 
-func (api *YoutubeAPI) GetUserPlaylists(tokens Credentials) []Playlist {
+func (api *YoutubeAPI) GetUserPlaylists(tokens Credentials) ([]Playlist, error) {
 	url := fmt.Sprintf("https://youtube.googleapis.com/youtube/v3/playlists?part=id,snippet&mine=true&key=%s", api.config.APIKey)
-	request, _ := http.NewRequest("GET", url, nil)
+	request, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
 	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
 	request.Header.Add("Accept", "application/json")
 
-	response, _ := api.httpClient.Do(request)
-	body, _ := ioutil.ReadAll(response.Body)
+	response, err := api.httpClient.Do(request)
+	if err != nil {
+		return nil, err
+	}
+	if response.StatusCode != 200 {
+		return nil, errors.New("YoutubeAPI.GetUserPlaylists: Response Status: " + response.Status)
+	}
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
 	playlists := playlistListResponse{}
 	json.Unmarshal(body, &playlists)
 
-	return playlists.Items
+	return playlists.Items, err
 }
 
-func (api *YoutubeAPI) GetPlaylistContent(tokens Credentials, playlistID string) (playlists []PlaylistItem) {
+func (api *YoutubeAPI) GetPlaylistContent(tokens Credentials, playlistID string) ([]PlaylistItem, error) {
 	url := fmt.Sprintf("https://www.googleapis.com/youtube/v3/playlistItems?part=id,snippet&playlistId=%s", playlistID)
 
+	playlists := []PlaylistItem{}
+
 	for {
-		request, _ := http.NewRequest("GET", url, nil)
+		request, err := http.NewRequest("GET", url, nil)
+		if err != nil {
+			return nil, err
+		}
 		request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
 		request.Header.Add("Accept", "application/json")
 
-		response, _ := api.httpClient.Do(request)
-		body, _ := ioutil.ReadAll(response.Body)
+		response, err := api.httpClient.Do(request)
+		if err != nil {
+			return nil, err
+		}
+		if response.StatusCode != 200 {
+			return nil, errors.New("YoutubeAPI.GetPlaylistContent: Response Status: " + response.Status)
+		}
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return nil, err
+		}
 		itemList := playlistItemListResponse{}
 		json.Unmarshal(body, &itemList)
 		playlists = append(playlists, itemList.Items...)
@@ -84,18 +125,24 @@ func (api *YoutubeAPI) GetPlaylistContent(tokens Credentials, playlistID string)
 		url = fmt.Sprintf("https://www.googleapis.com/youtube/v3/playlistItems?part=id,snippet&playlistId=%s&pageToken=%s", playlistID, itemList.NextPageToken)
 	}
 
-	return playlists
-
+	return playlists, nil
 }
 
-func (api *YoutubeAPI) LikeVideo(tokens Credentials, videoID string) {
+func (api *YoutubeAPI) LikeVideo(tokens Credentials, videoID string) error {
 	url := "https://www.googleapis.com/youtube/v3/videos/rate?rating=like&id=" + videoID
 	request, _ := http.NewRequest("POST", url, nil)
 	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
-	api.httpClient.Do(request)
+	response, err := api.httpClient.Do(request)
+	if err != nil {
+		return err
+	}
+	if response.StatusCode != 200 {
+		return errors.New("YoutubeAPI.LikeVideo: Response Status: " + response.Status)
+	}
+	return nil
 }
 
-func (api *YoutubeAPI) SearchVideo(title string, artists string) string {
+func (api *YoutubeAPI) SearchVideo(title string, artists string) (string, error) {
 	query := "https://youtube.com/results?search_query=" + strings.Map(func(r rune) rune {
 		if r == ' ' {
 			return '+'
@@ -103,33 +150,55 @@ func (api *YoutubeAPI) SearchVideo(title string, artists string) string {
 			return r
 		}
 	}, url.QueryEscape(title+"+"+artists))
-	response, _ := http.Get(query)
-	body, _ := ioutil.ReadAll(response.Body)
+	response, err := http.Get(query)
+	if err != nil {
+		return "", err
+	}
+	if response.StatusCode != 200 {
+		return "", errors.New("YoutubeAPI.SearchVideo: Response Status: " + response.Status)
+	}
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return "", err
+	}
 	idx := bytes.Index(body, []byte("/watch?v="))
+	if idx == -1 {
+		return "", errors.New("YoutubeAPI.SearchVideo: No video in response")
+	}
 	idx2 := bytes.Index(body[idx:], []byte("\""))
-	return string(body[idx+9 : idx+idx2])
+	return string(body[idx+9 : idx+idx2]), nil
 }
 
-func (api *YoutubeAPI) CreatePlaylist(tokens Credentials, title string) Playlist {
+func (api *YoutubeAPI) CreatePlaylist(tokens Credentials, title string) (Playlist, error) {
 	data := `{ "snippet": { "title": "` + title + `" } }`
 	url := "https://www.googleapis.com/youtube/v3/playlists?part=id,snippet"
-	log.Println("Create", title)
-	request, _ := http.NewRequest("POST", url, strings.NewReader(data))
-	log.Println("Data:", data)
+	request, err := http.NewRequest("POST", url, strings.NewReader(data))
+	if err != nil {
+		return Playlist{}, err
+	}
 	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
 	request.Header.Add("Accept", "application/json")
 	request.Header.Add("Content-Type", "application/json")
 
-	response, _ := api.httpClient.Do(request)
-	body, _ := ioutil.ReadAll(response.Body)
+	response, err := api.httpClient.Do(request)
+	if err != nil {
+		return Playlist{}, err
+	}
+	if response.StatusCode != 200 {
+		return Playlist{}, errors.New("YoutubeAPI.CreatePlaylist: Response Status: " + response.Status)
+	}
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return Playlist{}, err
+	}
 	log.Println("CreatePlaylistResponse:", string(body))
 	playlist := Playlist{}
 	json.Unmarshal(body, &playlist)
 
-	return playlist
+	return playlist, nil
 }
 
-func (api *YoutubeAPI) AddToPlaylist(tokens Credentials, playlistID string, videoID string) {
+func (api *YoutubeAPI) AddToPlaylist(tokens Credentials, playlistID string, videoID string) error {
 	url := "https://www.googleapis.com/youtube/v3/playlistItems?part=snippet"
 	snippets := addVideosRequest{
 		Snippet: snippet{
@@ -140,22 +209,44 @@ func (api *YoutubeAPI) AddToPlaylist(tokens Credentials, playlistID string, vide
 			},
 		},
 	}
-	data, _ := json.Marshal(snippets)
+	data, err := json.Marshal(snippets)
+	if err != nil {
+		return err
+	}
 
-	request, _ := http.NewRequest("POST", url, bytes.NewReader(data))
+	request, err := http.NewRequest("POST", url, bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
 	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
 	request.Header.Add("Content-Type", "application/json")
 	request.Header.Add("Accept", "application/json")
 
-	api.httpClient.Do(request)
+	response, err := api.httpClient.Do(request)
+	if err != nil {
+		return err
+	}
+	if response.StatusCode != 200 {
+		return errors.New("YoutubeAPI.AddToPlaylist: Response Status: " + response.Status)
+	}
 
+	return nil
 }
 
-func (api *YoutubeAPI) Authorized(tokens Credentials) bool {
+func (api *YoutubeAPI) Authorized(tokens Credentials) (bool, error) {
 	url := "https://www.googleapis.com/youtube/v3/channels?part=id&mine=true&key=" + api.config.APIKey
 	request, _ := http.NewRequest("GET", url, nil)
 	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
 
-	response, _ := api.httpClient.Do(request)
-	return response.StatusCode != 401
+	response, err := api.httpClient.Do(request)
+	if err != nil {
+		return false, err
+	}
+	if response.StatusCode == 401 {
+		return false, nil
+	}
+	if response.StatusCode != 200 {
+		return false, errors.New("YoutubeAPI.Authorized: Response Status: " + response.Status)
+	}
+	return true, nil
 }

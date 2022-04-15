@@ -10,6 +10,7 @@ import (
 	telegramAdapter "github.com/de1phin/music-transfer/internal/interactor/adapters/telegram"
 	"github.com/de1phin/music-transfer/internal/interactor/interactors/console"
 	"github.com/de1phin/music-transfer/internal/interactor/interactors/telegram"
+	logger "github.com/de1phin/music-transfer/internal/log/file_logger"
 	"github.com/de1phin/music-transfer/internal/mux"
 	"github.com/de1phin/music-transfer/internal/server/callback"
 	"github.com/de1phin/music-transfer/internal/service/mock"
@@ -56,7 +57,10 @@ func main() {
 
 	userStateStorage := cache.NewCacheStorage[int64, mux.UserState]()
 
-	telegram := telegram.NewTelegramBot(config.GetTelegramToken())
+	telegram, err := telegram.NewTelegramBot(config.GetTelegramToken())
+	if err != nil {
+		panic("Telegram init error: " + err.Error())
+	}
 	telegramAdapter := telegramAdapter.NewTelegramAdapter(telegram, userStateStorage)
 
 	console := console.NewConsoleInteractor()
@@ -69,7 +73,12 @@ func main() {
 		telegramAdapter,
 		consoleAdapter,
 	}
-	mux := mux.NewMux(services, interactors, transferStorage, idStorage)
+
+	fileLogger, err := logger.NewFileLogger("./log/a.log")
+	if err != nil {
+		panic("FileLogger init error: " + err.Error())
+	}
+	mux := mux.NewMux(services, interactors, transferStorage, idStorage, fileLogger)
 
 	go server.Run()
 
@@ -79,4 +88,6 @@ func main() {
 	c := make(chan os.Signal)
 	<-c
 	muxQuit <- struct{}{}
+
+	fileLogger.Close()
 }

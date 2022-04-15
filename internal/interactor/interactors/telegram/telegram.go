@@ -1,6 +1,7 @@
 package telegram
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -23,10 +24,10 @@ type Button struct {
 	Data string
 }
 
-func NewTelegramBot(token string) *TelegramBot {
+func NewTelegramBot(token string) (*TelegramBot, error) {
 	bot, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
@@ -36,28 +37,34 @@ func NewTelegramBot(token string) *TelegramBot {
 		updates: updates,
 	}
 
-	return &tg
+	return &tg, nil
 }
 
-func (tg *TelegramBot) GetMessage() Message {
+func (tg *TelegramBot) GetMessage() (Message, error) {
 	upd := <-tg.updates
 	if upd.Message == nil {
+		if upd.CallbackQuery == nil {
+			return Message{}, errors.New("Empty message")
+		}
 		data := strings.Split(upd.CallbackQuery.Data, ":::")
 		return Message{
 			Text:   data[0],
 			ChatID: upd.CallbackQuery.Message.Chat.ID,
 			Data:   data[1],
-		}
+		}, nil
 	} else {
+		if upd.Message.Text == "" {
+			return Message{}, errors.New("Empty message")
+		}
 		return Message{
 			Text:   upd.Message.Text,
 			ChatID: upd.Message.Chat.ID,
 			Data:   "",
-		}
+		}, nil
 	}
 }
 
-func (tg *TelegramBot) SendMessage(chatID int64, text string, buttons []Button, urls []Button) {
+func (tg *TelegramBot) SendMessage(chatID int64, text string, buttons []Button, urls []Button) error {
 	keyboardRows := make([]tgbotapi.InlineKeyboardButton, 0)
 	for _, button := range buttons {
 		data := fmt.Sprintf("%s:::%s", button.Text, button.Data)
@@ -71,6 +78,6 @@ func (tg *TelegramBot) SendMessage(chatID int64, text string, buttons []Button, 
 	if len(keyboardRows) > 0 {
 		msg.ReplyMarkup = tgbotapi.NewInlineKeyboardMarkup(keyboardRows)
 	}
-	tg.bot.Send(msg)
-
+	_, err := tg.bot.Send(msg)
+	return err
 }

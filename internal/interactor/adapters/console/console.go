@@ -26,17 +26,20 @@ func (*ConsoleAdapter) Name() string {
 	return "console"
 }
 
-func (ca *ConsoleAdapter) GetMessage() mux.Message {
-	text := ca.console.GetMessage()
+func (ca *ConsoleAdapter) GetMessage() (mux.Message, error) {
+	text, err := ca.console.GetMessage()
+	if err != nil {
+		return mux.Message{}, err
+	}
 	msg := mux.Message{
 		UserID:    ca.defaultUserID,
 		UserState: ca.userState,
 		Content:   strings.ToLower(strings.Trim(text, " \n\r\t")),
 	}
-	return msg
+	return msg, nil
 }
 
-func (ca *ConsoleAdapter) SendMessage(msg mux.Message) {
+func (ca *ConsoleAdapter) SendMessage(msg mux.Message) error {
 	ca.userState = msg.UserState
 	content := mux.Content{}
 	xml.Unmarshal([]byte(msg.Content), &content)
@@ -57,5 +60,5 @@ func (ca *ConsoleAdapter) SendMessage(msg mux.Message) {
 			text += i.URL.Link + "\n"
 		}
 	}
-	ca.console.SendMessage(text)
+	return ca.console.SendMessage(text)
 }

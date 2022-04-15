@@ -16,12 +16,14 @@ func NewConsoleInteractor() *ConsoleInteractor {
 	return &console
 }
 
-func (console *ConsoleInteractor) GetMessage() string {
-	msg, _ := console.readWriter.ReadString('\n')
-	return msg
+func (console *ConsoleInteractor) GetMessage() (string, error) {
+	return console.readWriter.ReadString('\n')
 }
 
-func (console *ConsoleInteractor) SendMessage(msg string) {
-	console.readWriter.WriteString(msg)
-	console.readWriter.Flush()
+func (console *ConsoleInteractor) SendMessage(msg string) error {
+	_, err := console.readWriter.WriteString(msg)
+	if err != nil {
+		return err
+	}
+	return console.readWriter.Flush()
 }

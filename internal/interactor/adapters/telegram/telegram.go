@@ -26,19 +26,19 @@ func (*TelegramAdapter) Name() string {
 	return "telegram"
 }
 
-func parseUserState(str string) (error, mux.UserState) {
+func parseUserState(str string) (mux.UserState, error) {
 	us, err := strconv.ParseInt(str, 10, 64)
 	if err != nil {
-		return err, mux.Idle
+		return mux.Idle, err
 	}
-	return nil, mux.UserState(us)
+	return mux.UserState(us), nil
 }
 
 func encodeUserState(us mux.UserState) string {
 	return strconv.FormatInt(int64(us), 10)
 }
 
-func (ta *TelegramAdapter) SendMessage(msg mux.Message) {
+func (ta *TelegramAdapter) SendMessage(msg mux.Message) error {
 	content := mux.Content{}
 	xml.Unmarshal([]byte(msg.Content), &content)
 	Buttons := make([]telegram.Button, 0)
@@ -70,11 +70,14 @@ func (ta *TelegramAdapter) SendMessage(msg mux.Message) {
 			})
 		}
 	}
-	ta.Telegram.SendMessage(msg.UserID, strings.Join(content.Text, "\n"), Buttons, URLButtons)
+	return ta.Telegram.SendMessage(msg.UserID, strings.Join(content.Text, "\n"), Buttons, URLButtons)
 }
 
-func (ta *TelegramAdapter) GetMessage() mux.Message {
-	telegramMessage := ta.Telegram.GetMessage()
+func (ta *TelegramAdapter) GetMessage() (mux.Message, error) {
+	telegramMessage, err := ta.Telegram.GetMessage()
+	if err != nil {
+		return mux.Message{}, err
+	}
 	msg := mux.Message{
 		Content: strings.ToLower(strings.Trim(telegramMessage.Text, " \n\r\t")),
 		UserID:  telegramMessage.ChatID,
@@ -82,12 +85,12 @@ func (ta *TelegramAdapter) GetMessage() mux.Message {
 	if telegramMessage.Data == "" {
 		msg.UserState = ta.userStateStorage.Get(msg.UserID)
 	} else {
-		err, us := parseUserState(telegramMessage.Data)
+		us, err := parseUserState(telegramMessage.Data)
 		if err != nil {
 			us = ta.userStateStorage.Get(msg.UserID)
 		}
 		msg.UserState = us
 	}
 	msg.Content = strings.ToLower(strings.Trim(msg.Content, " \n\r\t"))
-	return msg
+	return msg, nil
 }

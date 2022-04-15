@@ -22,6 +22,15 @@ func NewStateHandler(state UserState, handler Handler) Handler {
 	}
 }
 
+func (mux *Mux) handleError(err error, from Interactor, msg Message) {
+	mux.logger.Log("Mux.handleError:", err)
+	from.SendMessage(Message{
+		UserID:    msg.UserID,
+		UserState: msg.UserState,
+		Content:   "<content><text>An error occured</text></content>",
+	})
+}
+
 func (mux *Mux) HandleIdle(from Interactor, msg Message, internalID int64) bool {
 	services := ""
 	for _, service := range mux.services {
@@ -44,20 +53,40 @@ func (mux *Mux) HandleIdle(from Interactor, msg Message, internalID int64) bool 
 func (mux *Mux) HandleChoosingSrc(from Interactor, msg Message, internalID int64) bool {
 	for _, service := range mux.services {
 		if service.Name() == msg.Content {
-			if !service.Authorized(internalID) {
+			authorized, err := service.Authorized(internalID)
+			if err != nil {
+				mux.handleError(err, from, msg)
+				return false
+			}
+			if !authorized {
+				authURL, err := service.GetAuthURL(internalID)
+				if err != nil {
+					mux.handleError(err, from, msg)
+					return false
+				}
+
 				from.SendMessage(Message{
 					UserID:    msg.UserID,
 					UserState: ChoosingDst,
 					Content: "<content><text>Please log into the service:</text><url><text>" +
-						strings.Title(service.Name()) + "</text><link><![CDATA[" + service.GetAuthURL(internalID) +
+						strings.Title(service.Name()) + "</text><link><![CDATA[" + authURL +
 						"]]></link></url></content>",
 				})
 				log.Println("wait for", internalID)
 				timeLimit := time.Now().Add(time.Second * 60)
-				for !service.Authorized(internalID) {
+				for {
 					time.Sleep(3 * time.Second)
 					if timeLimit.Before(time.Now()) {
 						return true
+					}
+					authorized, err := service.Authorized(internalID)
+
+					if err != nil {
+						mux.handleError(err, from, msg)
+						return false
+					}
+					if authorized {
+						break
 					}
 				}
 				log.Println("stop")
@@ -93,20 +122,39 @@ func (mux *Mux) HandleChoosingSrc(from Interactor, msg Message, internalID int64
 func (mux *Mux) HandleChoosingDst(from Interactor, msg Message, internalID int64) bool {
 	for _, service := range mux.services {
 		if service.Name() == msg.Content {
-			if !service.Authorized(internalID) {
+			authorized, err := service.Authorized(internalID)
+			if err != nil {
+				mux.handleError(err, from, msg)
+				return false
+			}
+			if !authorized {
+				authURL, err := service.GetAuthURL(internalID)
+				if err != nil {
+					mux.handleError(err, from, msg)
+					return false
+				}
+
 				from.SendMessage(Message{
 					UserID:    msg.UserID,
 					UserState: Idle,
 					Content: "<content><text>Please log into the service:</text><url><text>" +
-						strings.Title(service.Name()) + "</text><link><![CDATA[" + service.GetAuthURL(internalID) +
+						strings.Title(service.Name()) + "</text><link><![CDATA[" + authURL +
 						"]]></link></url></content>",
 				})
 
 				timeLimit := time.Now().Add(time.Second * 60)
-				for !service.Authorized(internalID) {
+				for {
 					time.Sleep(3 * time.Second)
 					if timeLimit.Before(time.Now()) {
 						return true
+					}
+					authorized, err := service.Authorized(internalID)
+					if err != nil {
+						mux.handleError(err, from, msg)
+						return false
+					}
+					if authorized {
+						break
 					}
 				}
 			}
@@ -120,8 +168,26 @@ func (mux *Mux) HandleChoosingDst(from Interactor, msg Message, internalID int64
 					" to " + strings.Title(service.Name()) + "</text></content>",
 			})
 
-			service.AddLiked(internalID, src.GetLiked(internalID))
-			service.AddPlaylists(internalID, src.GetPlaylists(internalID))
+			liked, err := src.GetLiked(internalID)
+			if err != nil {
+				mux.handleError(err, from, msg)
+				return false
+			}
+			err = service.AddLiked(internalID, liked)
+			if err != nil {
+				mux.handleError(err, from, msg)
+				return false
+			}
+			playlists, err := src.GetPlaylists(internalID)
+			if err != nil {
+				mux.handleError(err, from, msg)
+				return false
+			}
+			err = service.AddPlaylists(internalID, playlists)
+			if err != nil {
+				mux.handleError(err, from, msg)
+				return false
+			}
 
 			return true
 		}

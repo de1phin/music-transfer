@@ -17,24 +17,25 @@ func (*Mock) Name() string {
 	return "mock"
 }
 
-func (*Mock) GetAuthURL(userID int64) string {
-	return fmt.Sprintf("mock/user_id=%d", userID)
+func (*Mock) GetAuthURL(userID int64) (string, error) {
+	return fmt.Sprintf("mock/user_id=%d", userID), nil
 }
 
-func (*Mock) GetLiked(int64) mux.Playlist {
+func (*Mock) GetLiked(int64) (mux.Playlist, error) {
 	return mux.Playlist{Title: "Liked", Songs: []mux.Song{
 		{
 			Title:   "Дед Максим",
 			Artists: "RADIO TAPOK",
 		},
-	}}
+	}}, nil
 }
 
-func (*Mock) AddLiked(userID int64, liked mux.Playlist) {
+func (*Mock) AddLiked(userID int64, liked mux.Playlist) error {
 	log.Println("[mock] Asked to like:", liked)
+	return nil
 }
 
-func (*Mock) GetPlaylists(int64) []mux.Playlist {
+func (*Mock) GetPlaylists(int64) ([]mux.Playlist, error) {
 	return []mux.Playlist{
 		{
 			Title: "Ded",
@@ -45,13 +46,14 @@ func (*Mock) GetPlaylists(int64) []mux.Playlist {
 				},
 			},
 		},
-	}
+	}, nil
 }
 
-func (*Mock) AddPlaylists(userID int64, playlists []mux.Playlist) {
+func (*Mock) AddPlaylists(userID int64, playlists []mux.Playlist) error {
 	log.Println("[mock] Asked to add:", playlists)
+	return nil
 }
 
-func (*Mock) Authorized(int64) bool {
-	return true
+func (*Mock) Authorized(int64) (bool, error) {
+	return true, nil
 }
