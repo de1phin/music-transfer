@@ -4,7 +4,11 @@ go 1.18
 
 require (
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
+	github.com/liyue201/goqr v0.0.0-20200803022322-df443203d4ea
+	github.com/pkg/errors v0.8.1
 	github.com/spf13/viper v1.10.1
+	github.com/srwiley/oksvg v0.0.0-20220128195007-1f435e4c2b44
+	github.com/srwiley/rasterx v0.0.0-20220128185129-2efea2b9ea41
 )
 
 require (
@@ -18,6 +22,8 @@ require (
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
+	golang.org/x/image v0.0.0-20211028202545-6944b10bf410 // indirect
+	golang.org/x/net v0.0.0-20211118161319-6a13c67c3ce4 // indirect
 	golang.org/x/sys v0.0.0-20211210111614-af8b64212486 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/ini.v1 v1.66.2 // indirect
