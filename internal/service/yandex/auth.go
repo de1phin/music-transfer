@@ -6,9 +6,32 @@ import (
 	"github.com/de1phin/music-transfer/internal/api/yandex"
 )
 
-func (y *Yandex) OnGetCredentials(userID int64, credentials yandex.Credentials) {
-	err := y.userStorage.Put(userID, credentials)
+func (ya *Yandex) OnGetCredentials(userID int64, credentials yandex.Credentials) {
+	err := ya.storage.Put(userID, credentials)
 	if err != nil {
-		y.logger.Log(errors.New("Yandex.OnGetCredentials: " + err.Error()))
+		ya.logger.Log(errors.New("Yandex.OnGetCredentials: " + err.Error()))
 	}
+}
+
+func (ya *Yandex) GetAuthURL(userID int64) (string, error) {
+	return ya.api.GetAuthURL(userID)
+}
+
+func (ya *Yandex) Authorized(userID int64) (bool, error) {
+	ok, err := ya.storage.Exist(userID)
+	if err != nil {
+		return ok, err
+	}
+	if !ok {
+		return false, nil
+	}
+	credentials, err := ya.storage.Get(userID)
+	if err != nil {
+		return false, nil
+	}
+	_, err = ya.api.GetMe(credentials)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
