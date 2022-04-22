@@ -16,21 +16,22 @@ func NewCacheStorage[Key comparable, T any]() *cacheStorage[Key, T] {
 	return &cache
 }
 
-func (cs *cacheStorage[Key, T]) Exist(id Key) bool {
+func (cs *cacheStorage[Key, T]) Exist(id Key) (bool, error) {
 	cs.Lock()
 	defer cs.Unlock()
 	_, ok := cs.storage[id]
-	return ok
+	return ok, nil
 }
 
-func (cs *cacheStorage[Key, T]) Get(id Key) T {
+func (cs *cacheStorage[Key, T]) Get(id Key) (T, error) {
 	cs.Lock()
 	defer cs.Unlock()
-	return cs.storage[id]
+	return cs.storage[id], nil
 }
 
-func (cs *cacheStorage[Key, T]) Put(id Key, data T) {
+func (cs *cacheStorage[Key, T]) Put(id Key, data T) error {
 	cs.Lock()
 	defer cs.Unlock()
 	cs.storage[id] = data
+	return nil
 }

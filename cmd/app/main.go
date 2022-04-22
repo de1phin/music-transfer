@@ -21,7 +21,7 @@ import (
 
 func main() {
 
-	config := config.NewConfig()
+	config := config.NewConfig("./config", "config", "yaml")
 
 	spotifyConfig := spotify.SpotifyConfig{
 		Scopes: config.GetSpotifyScope(),

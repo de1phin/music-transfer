@@ -1,10 +1,12 @@
 package yandex
 
-import "net/http"
+import (
+	"net/http"
+)
 
 type Credentials struct {
-	UID     string
-	cookies []*http.Cookie
+	UID     string `db:"yandex_id"`
+	Cookies string `db:"cookies"`
 }
 
 type loginForm struct {
@@ -13,21 +15,21 @@ type loginForm struct {
 	Password string `json:"password"`
 }
 
-type yandexLoginFormTokens struct {
+type loginFormTokens struct {
 	csrf        string
 	processUUID string
 	cookies     []*http.Cookie
 }
 
-type yandexSubmitResponse struct {
+type submitResponse struct {
 	CsrfToken string `json:"csrf_token"`
 	Status    string `json:"status"`
 	TrackID   string `json:"track_id"`
 }
 
-type yandexAuthResponse struct {
+type authResponse struct {
 	Status string `json:"status"`
-	UID    string `json:"default_uid"`
+	UID    int64  `json:"default_uid"`
 }
 
 type Accounts struct {

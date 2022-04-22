@@ -159,7 +159,16 @@ func (mux *Mux) HandleChoosingDst(from Interactor, msg Message, internalID int64
 				}
 			}
 
-			src := mux.transferStorage.Get(internalID)
+			src, err := mux.transferStorage.Get(internalID)
+			if err != nil {
+				from.SendMessage(Message{
+					UserID:    msg.UserID,
+					UserState: Idle,
+					Content:   "<content><text>An error occured</text></content>",
+				})
+				mux.logger.Log("Mux.HandleChoosingDst:", err)
+				return true
+			}
 
 			from.SendMessage(Message{
 				UserID:    msg.UserID,

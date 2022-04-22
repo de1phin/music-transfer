@@ -7,14 +7,16 @@ import (
 )
 
 type YandexAPI struct {
-	logger           log.Logger
-	httpClient       *http.Client
-	onGetCredentials OnGetCredentials
+	fixedAuthMagicToken string
+	logger              log.Logger
+	httpClient          *http.Client
+	onGetCredentials    OnGetCredentials
 }
 
-func NewYandexAPI(logger log.Logger) *YandexAPI {
+func NewYandexAPI(logger log.Logger, fixedAuthMagicToken string) *YandexAPI {
 	return &YandexAPI{
-		logger:     logger,
-		httpClient: &http.Client{},
+		fixedAuthMagicToken: fixedAuthMagicToken,
+		logger:              logger,
+		httpClient:          &http.Client{},
 	}
 }

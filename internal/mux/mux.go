@@ -55,13 +55,13 @@ func NewMux(services []Service, interactors []Interactor, transferStorage storag
 
 func (mux *Mux) Run(quit <-chan struct{}) {
 	for _, interactor := range mux.interactors {
-		go mux.handleInteractor(interactor)
+		go mux.listenInteractor(interactor)
 	}
 
 	<-quit
 }
 
-func (mux *Mux) handleInteractor(interactor Interactor) {
+func (mux *Mux) listenInteractor(interactor Interactor) {
 	for {
 		msg, err := interactor.GetMessage()
 		mux.logger.Log("Mux.handleInteractor: New message via " + interactor.Name())
@@ -71,11 +71,21 @@ func (mux *Mux) handleInteractor(interactor Interactor) {
 		}
 		key := interactor.Name() + ":" + fmt.Sprintf("%d", msg.UserID)
 		var internalID int64
-		if mux.idStorage.Exist(key) {
-			internalID = mux.idStorage.Get(key)
+		ok, err := mux.idStorage.Exist(key)
+		if err != nil {
+			mux.logger.Log("Mux.handleInteractor:", err)
+		}
+		if ok {
+			internalID, err = mux.idStorage.Get(key)
+			if err != nil {
+				mux.logger.Log("Mux.handleInteractor:", err)
+			}
 		} else {
 			internalID = mux.IDGenerator.NextID()
-			mux.idStorage.Put(key, internalID)
+			err = mux.idStorage.Put(key, internalID)
+			if err != nil {
+				mux.logger.Log("Mux.handleInteractor:", err)
+			}
 		}
 
 		start := time.Now()

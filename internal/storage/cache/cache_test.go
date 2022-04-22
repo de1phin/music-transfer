@@ -9,13 +9,13 @@ import (
 func TestCache(t *testing.T) {
 	cache := cache.NewCacheStorage[int64, int]()
 	cache.Put(3, 10)
-	if cache.Get(3) != 10 {
-		t.Fatal("cache.Get(3): Expected 10, got", cache.Get(3))
+	if val, _ := cache.Get(3); val != 10 {
+		t.Fatal("cache.Get(3): Expected 10, got", val)
 	}
-	if !cache.Exist(3) {
+	if val, _ := cache.Exist(3); !val {
 		t.Fatal("cache.Exist(3): Expected true, got false")
 	}
-	if cache.Exist(10) {
+	if val, _ := cache.Exist(10); val {
 		t.Fatal("cache.Exist(10): Expected false, got true")
 	}
 }

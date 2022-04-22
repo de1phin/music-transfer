@@ -35,7 +35,10 @@ func (spotify *spotifyService) Name() string {
 }
 
 func (spotify *spotifyService) GetLiked(userID int64) (mux.Playlist, error) {
-	tokens := spotify.tokenStorage.Get(userID)
+	tokens, err := spotify.tokenStorage.Get(userID)
+	if err != nil {
+		return mux.Playlist{}, err
+	}
 	liked := mux.Playlist{}
 	playlist, err := spotify.api.GetLiked(tokens)
 	if err != nil {
@@ -58,7 +61,10 @@ func (spotify *spotifyService) GetLiked(userID int64) (mux.Playlist, error) {
 }
 
 func (spotify *spotifyService) AddLiked(userID int64, liked mux.Playlist) error {
-	tokens := spotify.tokenStorage.Get(userID)
+	tokens, err := spotify.tokenStorage.Get(userID)
+	if err != nil {
+		return err
+	}
 	tracks := make([]spotifyAPI.Track, 0)
 	for _, track := range liked.Songs {
 		search, err := spotify.api.SearchTrack(tokens, track.Title, track.Artists)
@@ -74,7 +80,10 @@ func (spotify *spotifyService) AddLiked(userID int64, liked mux.Playlist) error 
 }
 
 func (spotify *spotifyService) GetPlaylists(userID int64) ([]mux.Playlist, error) {
-	tokens := spotify.tokenStorage.Get(userID)
+	tokens, err := spotify.tokenStorage.Get(userID)
+	if err != nil {
+		return nil, err
+	}
 	spotifyPlaylists, err := spotify.api.GetUserPlaylists(tokens)
 	if err != nil {
 		return nil, err
@@ -104,7 +113,10 @@ func (spotify *spotifyService) GetPlaylists(userID int64) ([]mux.Playlist, error
 }
 
 func (spotify *spotifyService) AddPlaylists(userID int64, playlists []mux.Playlist) error {
-	tokens := spotify.tokenStorage.Get(userID)
+	tokens, err := spotify.tokenStorage.Get(userID)
+	if err != nil {
+		return err
+	}
 	userPlaylists, err := spotify.api.GetUserPlaylists(tokens)
 	if err != nil {
 		return err

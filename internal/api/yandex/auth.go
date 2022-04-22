@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -18,19 +19,19 @@ func (api *YandexAPI) BindOnGetCredentials(onGetCredentials OnGetCredentials) {
 	api.onGetCredentials = onGetCredentials
 }
 
-func (api *YandexAPI) checkStatus(userID int64, yaFormTokens yandexLoginFormTokens, yaSubmit yandexSubmitResponse) {
+func (api *YandexAPI) checkStatus(userID int64, formTokens loginFormTokens, submitResponse submitResponse) {
 	timeLimit := time.Now().Add(time.Second * 100)
-	yaSubmit.CsrfToken = url.QueryEscape(yaSubmit.CsrfToken)
+	submitResponse.CsrfToken = url.QueryEscape(submitResponse.CsrfToken)
 	url := "https://passport.yandex.ru/auth/new/magic/status/"
 	for time.Now().Before(timeLimit) {
 		time.Sleep(time.Second)
-		data := "track_id=" + yaSubmit.TrackID + "&csrf_token=" + yaSubmit.CsrfToken
+		data := "track_id=" + submitResponse.TrackID + "&csrf_token=" + submitResponse.CsrfToken
 		req, err := http.NewRequest("POST", url, strings.NewReader(data))
 		if err != nil {
 			api.logger.Log("YandexAPI.checkStatus:", err)
 			continue
 		}
-		for _, c := range yaFormTokens.cookies {
+		for _, c := range formTokens.cookies {
 			req.AddCookie(c)
 		}
 		resp, err := api.httpClient.Do(req)
@@ -60,13 +61,17 @@ func (api *YandexAPI) checkStatus(userID int64, yaFormTokens yandexLoginFormToke
 				api.logger.Log(err)
 				continue
 			}
-			authResponse := yandexAuthResponse{}
+			authResponse := authResponse{}
 			json.Unmarshal(body, &authResponse)
 			credentials := Credentials{
-				UID:     authResponse.UID,
-				cookies: resp.Cookies(),
+				UID: strconv.FormatInt(authResponse.UID, 10),
 			}
-			credentials.cookies = append(credentials.cookies, yaFormTokens.cookies...)
+			for _, c := range resp.Cookies() {
+				credentials.Cookies += c.Name + "=" + c.Value + "; "
+			}
+			for _, c := range formTokens.cookies {
+				credentials.Cookies += c.Name + "=" + c.Value + "; "
+			}
 			api.onGetCredentials(userID, credentials)
 			break
 		}
@@ -74,33 +79,45 @@ func (api *YandexAPI) checkStatus(userID int64, yaFormTokens yandexLoginFormToke
 }
 
 func (api *YandexAPI) GetAuthURL(userID int64) (string, error) {
-	yaFormTokens, err := api.getYandexLoginFormTokens()
+	formTokens, err := api.getYandexLoginFormTokens()
 	if err != nil {
 		api.logger.Log("YandexAPI.GetAuthURL.getYandexLoginFormTokens:", err)
 		return "", err
 	}
 
-	yaSubmit, err := api.getYandexSubmitResponse(yaFormTokens)
+	submitResponse, err := api.getYandexSubmitResponse(formTokens)
 	if err != nil {
 		api.logger.Log("YandexAPI.GetAuthURL.getYandexSubmitResponse:", err)
 		return "", err
 	}
 
-	svgQR, err := api.getQRCodeSVG(yaSubmit.TrackID)
-	if err != nil {
-		api.logger.Log("YandexAPI.GetAuthURL.getQRCode:", err)
-		return "", err
+	var url string
+	if api.fixedAuthMagicToken == "" {
+		timer := time.Now()
+		svgQR, err := api.getQRCodeSVG(submitResponse.TrackID)
+		if err != nil {
+			api.logger.Log("YandexAPI.GetAuthURL.getQRCode:", err)
+			return "", err
+		}
+
+		url, err = decodeQR(svgQR)
+		if err != nil {
+			api.logger.Log("YandexAPI.GetAuthURL.decodeQR:", err)
+			return "", err
+		}
+		api.logger.Log("YandexAPI: QR fetched and decoded in", time.Since(timer))
+	} else {
+		url = "https://passport.yandex.ru/am/push/qrsecure?track_id=" + submitResponse.TrackID +
+			"&magic=" + api.fixedAuthMagicToken
 	}
 
-	url, err := decodeQR(svgQR)
-
-	go api.checkStatus(userID, yaFormTokens, yaSubmit)
+	go api.checkStatus(userID, formTokens, submitResponse)
 
 	return url, err
 }
 
-func (api *YandexAPI) getYandexLoginFormTokens() (yandexLoginFormTokens, error) {
-	result := yandexLoginFormTokens{}
+func (api *YandexAPI) getYandexLoginFormTokens() (loginFormTokens, error) {
+	result := loginFormTokens{}
 
 	req, err := http.NewRequest("GET", "https://passport.yandex.ru/auth", nil)
 	if err != nil {
@@ -138,16 +155,16 @@ func (api *YandexAPI) getYandexLoginFormTokens() (yandexLoginFormTokens, error) 
 	return result, nil
 }
 
-func (api *YandexAPI) getYandexSubmitResponse(yaFormTokens yandexLoginFormTokens) (yandexSubmitResponse, error) {
-	result := yandexSubmitResponse{}
+func (api *YandexAPI) getYandexSubmitResponse(formTokens loginFormTokens) (submitResponse, error) {
+	result := submitResponse{}
 
-	data := "csrf_token=" + url.QueryEscape(yaFormTokens.csrf) + "&process_uuid=" +
-		url.QueryEscape(yaFormTokens.processUUID) + "&with_code=1"
+	data := "csrf_token=" + url.QueryEscape(formTokens.csrf) + "&process_uuid=" +
+		url.QueryEscape(formTokens.processUUID) + "&with_code=1"
 	req, err := http.NewRequest("POST", "https://passport.yandex.ru/registration-validations/auth/password/submit", strings.NewReader(data))
 	if err != nil {
 		return result, err
 	}
-	for _, c := range yaFormTokens.cookies {
+	for _, c := range formTokens.cookies {
 		req.AddCookie(c)
 	}
 

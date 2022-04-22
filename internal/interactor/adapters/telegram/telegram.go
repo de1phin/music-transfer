@@ -83,11 +83,17 @@ func (ta *TelegramAdapter) GetMessage() (mux.Message, error) {
 		UserID:  telegramMessage.ChatID,
 	}
 	if telegramMessage.Data == "" {
-		msg.UserState = ta.userStateStorage.Get(msg.UserID)
+		msg.UserState, err = ta.userStateStorage.Get(msg.UserID)
+		if err != nil {
+			return mux.Message{}, err
+		}
 	} else {
 		us, err := parseUserState(telegramMessage.Data)
 		if err != nil {
-			us = ta.userStateStorage.Get(msg.UserID)
+			us, err = ta.userStateStorage.Get(msg.UserID)
+			if err != nil {
+				return mux.Message{}, err
+			}
 		}
 		msg.UserState = us
 	}

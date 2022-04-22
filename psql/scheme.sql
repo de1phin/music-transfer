@@ -1,0 +1,5 @@
+CREATE TABLE IF NOT EXISTS Yandex (
+    id INT PRIMARY KEY UNIQUE NOT NULL,
+    yandex_id VARCHAR,
+    cookies VARCHAR
+);

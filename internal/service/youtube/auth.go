@@ -15,6 +15,9 @@ func (yt *youtubeService) OnGetTokens(userID int64, tokens youtube.Credentials) 
 }
 
 func (yt *youtubeService) Authorized(userID int64) (bool, error) {
-	tokens := yt.tokenStorage.Get(userID)
+	tokens, err := yt.tokenStorage.Get(userID)
+	if err != nil {
+		return false, err
+	}
 	return yt.api.Authorized(tokens)
 }

@@ -6,10 +6,10 @@ import (
 
 type config struct{}
 
-func NewConfig() *config {
-	viper.AddConfigPath("config")
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
+func NewConfig(configPath string, configName string, configType string) *config {
+	viper.AddConfigPath(configPath)
+	viper.SetConfigName(configName)
+	viper.SetConfigType(configType)
 
 	viper.ReadInConfig()
 
