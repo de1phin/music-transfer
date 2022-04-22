@@ -7,7 +7,13 @@ import (
 )
 
 func (ya *Yandex) OnGetCredentials(userID int64, credentials yandex.Credentials) {
-	err := ya.storage.Put(userID, credentials)
+	user, err := ya.api.GetMe(&credentials)
+	if err != nil {
+		ya.logger.Log(err)
+		return
+	}
+	credentials.Login = user.Login
+	err = ya.storage.Put(userID, credentials)
 	if err != nil {
 		ya.logger.Log(errors.New("Yandex.OnGetCredentials: " + err.Error()))
 	}
@@ -29,7 +35,7 @@ func (ya *Yandex) Authorized(userID int64) (bool, error) {
 	if err != nil {
 		return false, nil
 	}
-	_, err = ya.api.GetMe(credentials)
+	_, err = ya.api.GetMe(&credentials)
 	if err != nil {
 		return false, err
 	}

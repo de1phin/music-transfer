@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	yandexAPI "github.com/de1phin/music-transfer/internal/api/yandex"
 	"github.com/de1phin/music-transfer/internal/config"
 	fileLogger "github.com/de1phin/music-transfer/internal/log/file_logger"
@@ -30,7 +28,5 @@ func main() {
 	api := yandexAPI.NewYandexAPI(logger, config.GetYandexMagicToken())
 	yandex := yandex.NewYandexService(api, table, logger)
 	api.BindOnGetCredentials(yandex.OnGetCredentials)
-
-	fmt.Println(yandex.GetPlaylists(123))
 
 }

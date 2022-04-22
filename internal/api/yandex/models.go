@@ -5,6 +5,7 @@ import (
 )
 
 type Credentials struct {
+	Login   string `db:"yandex_login"`
 	UID     string `db:"yandex_id"`
 	Cookies string `db:"cookies"`
 }
@@ -51,13 +52,28 @@ type Artist struct {
 	Name string `json:"name"`
 }
 
+type Library struct {
+	Owner       Owner   `json:"owner"`
+	PlaylistIDs []int64 `json:"playlistIds"`
+}
+
 type PlaylistResponse struct {
 	Playlist Playlist `json:"playlist"`
 }
 
-type Library struct {
-	Owner       Owner   `json:"owner"`
-	PlaylistIDs []int64 `json:"playlistIds"`
+type TrackItem struct {
+	ID     int64    `json:"id"`
+	Title  string   `json:"title"`
+	Artist []Artist `json:"artists"`
+	Type   string   `json:"music"`
+}
+
+type TrackItemArray struct {
+	Items []TrackItem `json:"items"`
+}
+
+type SearchResponse struct {
+	Tracks TrackItemArray `json:"tracks"`
 }
 
 type loginForm struct {
@@ -76,6 +92,10 @@ type submitResponse struct {
 	CsrfToken string `json:"csrf_token"`
 	Status    string `json:"status"`
 	TrackID   string `json:"track_id"`
+}
+
+type authHandlerResponse struct {
+	Csrf string `json:"csrf"`
 }
 
 type authResponse struct {

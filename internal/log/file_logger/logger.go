@@ -25,21 +25,19 @@ func NewFileLogger(path string) (*FileLogger, error) {
 }
 
 func (fl *FileLogger) Log(x ...any) {
-	go func() {
-		hasError := false
-		for _, i := range x {
-			if _, ok := i.(error); ok {
-				hasError = true
-				break
-			}
+	hasError := false
+	for _, i := range x {
+		if _, ok := i.(error); ok {
+			hasError = true
+			break
 		}
+	}
 
-		if hasError {
-			fl.errorLogger.Println(x...)
-		} else {
-			fl.defaultLogger.Println(x...)
-		}
-	}()
+	if hasError {
+		fl.errorLogger.Println(x...)
+	} else {
+		fl.defaultLogger.Println(x...)
+	}
 }
 
 func (fl *FileLogger) Close() error {

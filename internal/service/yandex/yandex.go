@@ -1,6 +1,8 @@
 package yandex
 
 import (
+	"errors"
+
 	"github.com/de1phin/music-transfer/internal/api/yandex"
 	"github.com/de1phin/music-transfer/internal/log"
 	"github.com/de1phin/music-transfer/internal/mux"
@@ -32,7 +34,7 @@ func (ya *Yandex) GetLiked(userID int64) (*mux.Playlist, error) {
 	if err != nil {
 		return nil, err
 	}
-	liked, err := ya.api.GetPlaylist(likedPlaylistID, credentials)
+	liked, err := ya.api.GetPlaylist(likedPlaylistID, &credentials)
 	if err != nil {
 		return nil, err
 	}
@@ -64,9 +66,12 @@ func (ya *Yandex) GetPlaylists(userID int64) ([]mux.Playlist, error) {
 	if err != nil {
 		return nil, err
 	}
-	library, err := ya.api.GetLibrary(credentials)
+	library, err := ya.api.GetLibrary(&credentials)
 	if err != nil {
 		return nil, err
+	}
+	if library == nil {
+		return nil, errors.New("YandexAPI.GetPlaylists: Empty library returned")
 	}
 
 	result := make([]mux.Playlist, 0)
@@ -75,7 +80,7 @@ func (ya *Yandex) GetPlaylists(userID int64) ([]mux.Playlist, error) {
 			continue
 		}
 
-		yaPlaylist, err := ya.api.GetPlaylist(id, credentials)
+		yaPlaylist, err := ya.api.GetPlaylist(id, &credentials)
 		if err != nil {
 			return nil, err
 		}
@@ -99,4 +104,31 @@ func (ya *Yandex) GetPlaylists(userID int64) ([]mux.Playlist, error) {
 	}
 
 	return result, nil
+}
+
+func (ya *Yandex) AddLiked(userID int64, liked mux.Playlist) error {
+	credentials, err := ya.storage.Get(userID)
+	if err != nil {
+		return err
+	}
+	csrf, err := ya.api.GetAuthCSRF(&credentials)
+	if err != nil {
+		return err
+	}
+
+	for _, song := range liked.Songs {
+		track, err := ya.api.SearchTrack(song.Title, song.Artists)
+		if err != nil {
+			return err
+		}
+		if track == nil {
+			continue
+		}
+		err = ya.api.LikeTrack(track, &credentials, csrf)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

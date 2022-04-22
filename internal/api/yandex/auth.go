@@ -3,6 +3,7 @@ package yandex
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -62,6 +63,7 @@ func (api *YandexAPI) checkStatus(userID int64, formTokens loginFormTokens, subm
 				continue
 			}
 			authResponse := authResponse{}
+			fmt.Println("Auth:", string(body))
 			json.Unmarshal(body, &authResponse)
 			credentials := Credentials{
 				UID: strconv.FormatInt(authResponse.UID, 10),
