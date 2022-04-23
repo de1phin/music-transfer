@@ -4,6 +4,7 @@ import (
 	"os"
 
 	spotifyAPI "github.com/de1phin/music-transfer/internal/api/spotify"
+	yandexAPI "github.com/de1phin/music-transfer/internal/api/yandex"
 	youtubeAPI "github.com/de1phin/music-transfer/internal/api/youtube"
 	"github.com/de1phin/music-transfer/internal/config"
 	consoleAdapter "github.com/de1phin/music-transfer/internal/interactor/adapters/console"
@@ -15,13 +16,23 @@ import (
 	"github.com/de1phin/music-transfer/internal/server/callback"
 	"github.com/de1phin/music-transfer/internal/service/mock"
 	"github.com/de1phin/music-transfer/internal/service/spotify"
+	"github.com/de1phin/music-transfer/internal/service/yandex"
 	"github.com/de1phin/music-transfer/internal/service/youtube"
 	"github.com/de1phin/music-transfer/internal/storage/cache"
+	"github.com/de1phin/music-transfer/internal/storage/postgres"
 )
 
 func main() {
 
 	config := config.NewConfig("./config", "config", "yaml")
+	fileLogger, err := logger.NewFileLogger("./log/a.log")
+	if err != nil {
+		panic("FileLogger init error: " + err.Error())
+	}
+	psql, err := postgres.NewPostgresDatabase(config.GetPosgresDataSourceName())
+	if err != nil {
+		panic(err)
+	}
 
 	spotifyConfig := spotify.SpotifyConfig{
 		Scopes: config.GetSpotifyScope(),
@@ -32,7 +43,7 @@ func main() {
 	}
 	server := callback.NewCallbackServer(config.GetServerHostname())
 
-	spotifyStorage := cache.NewCacheStorage[int64, spotifyAPI.Credentials]()
+	spotifyStorage := postgres.NewTable[int64, spotifyAPI.Credentials](psql, "Spotify", "id")
 	spotifyAPI := spotifyAPI.NewSpotifyAPI(spotifyConfig.Client, "http://"+config.GetServerHostname())
 	spotify := spotify.NewSpotifyService(spotifyConfig, "http://"+config.GetServerHostname(), spotifyAPI, spotifyStorage)
 	spotifyAPI.BindHandler(server.ServeMux, spotify.OnGetTokens)
@@ -49,9 +60,15 @@ func main() {
 	youtube := youtube.NewYouTubeService(youtubeAPI, youtubeStorage, &youtubeConfig)
 	youtubeAPI.BindHandler(server.ServeMux, youtube.OnGetTokens)
 
+	yandexStorage := postgres.NewTable[int64, yandexAPI.Credentials](psql, "Yandex", "id")
+	yandexAPI := yandexAPI.NewYandexAPI(fileLogger, config.GetYandexMagicToken())
+	yandex := yandex.NewYandexService(yandexAPI, yandexStorage, fileLogger)
+	yandexAPI.BindOnGetCredentials(yandex.OnGetCredentials)
+
 	services := []mux.Service{
 		spotify,
 		youtube,
+		yandex,
 		mock.NewMockService(),
 	}
 
@@ -74,10 +91,6 @@ func main() {
 		consoleAdapter,
 	}
 
-	fileLogger, err := logger.NewFileLogger("./log/a.log")
-	if err != nil {
-		panic("FileLogger init error: " + err.Error())
-	}
 	mux := mux.NewMux(services, interactors, transferStorage, idStorage, fileLogger)
 
 	go server.Run()

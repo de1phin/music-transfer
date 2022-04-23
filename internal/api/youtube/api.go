@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
@@ -191,7 +190,6 @@ func (api *YoutubeAPI) CreatePlaylist(tokens Credentials, title string) (Playlis
 	if err != nil {
 		return Playlist{}, err
 	}
-	log.Println("CreatePlaylistResponse:", string(body))
 	playlist := Playlist{}
 	json.Unmarshal(body, &playlist)
 

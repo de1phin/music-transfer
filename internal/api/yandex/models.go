@@ -32,6 +32,22 @@ type DisplayName struct {
 	Name      string `json:"name"`
 }
 
+type playlistPatchDifference struct {
+	Operation string         `json:"op"`
+	At        int            `json:"at"`
+	Tracks    []TrackSnippet `json:"tracks"`
+}
+
+type playlistAddResponse struct {
+	Playlist PlaylistSnippet `json:"playlist"`
+}
+
+type PlaylistSnippet struct {
+	Title      string `json:"title"`
+	Kind       int64  `json:"kind"`
+	TrackCount int64  `json:"trackCount"`
+}
+
 type Playlist struct {
 	Title      string   `json:"title"`
 	Kind       int      `json:"kind"`
@@ -44,7 +60,13 @@ type Track struct {
 	ID      string   `json:"id"`
 	Title   string   `json:"title"`
 	Artists []Artist `json:"artists"`
+	Albums  []Album  `json:"albums"`
 	Type    string   `json:"type"`
+}
+
+type TrackSnippet struct {
+	ID      string `json:"id"`
+	AlbumID int64  `json:"albumId"`
 }
 
 type Artist struct {
@@ -53,18 +75,25 @@ type Artist struct {
 }
 
 type Library struct {
-	Owner       Owner   `json:"owner"`
-	PlaylistIDs []int64 `json:"playlistIds"`
+	Owner       Owner      `json:"owner"`
+	Playlists   []Playlist `json:"playlists"`
+	PlaylistIDs []int64    `json:"playlistIds"`
 }
 
 type PlaylistResponse struct {
 	Playlist Playlist `json:"playlist"`
 }
 
+type Album struct {
+	Title string `json:"title"`
+	ID    int64  `json:"id"`
+}
+
 type TrackItem struct {
 	ID     int64    `json:"id"`
 	Title  string   `json:"title"`
 	Artist []Artist `json:"artists"`
+	Albums []Album  `json:"albums"`
 	Type   string   `json:"music"`
 }
 
@@ -94,8 +123,12 @@ type submitResponse struct {
 	TrackID   string `json:"track_id"`
 }
 
-type authHandlerResponse struct {
-	Csrf string `json:"csrf"`
+type authTokensResponse struct {
+	User AuthTokens `json:"user"`
+}
+
+type AuthTokens struct {
+	Sign string `json:"sign"`
 }
 
 type authResponse struct {

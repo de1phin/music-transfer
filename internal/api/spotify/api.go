@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 )
@@ -41,13 +40,10 @@ func (api *SpotifyAPI) GetLiked(tokens Credentials) (Playlist, error) {
 		request.Header.Add("Content-Type", "application/json")
 		request.Header.Add("Authorization", "Bearer "+(tokens.AccessToken))
 
-		log.Println("Request:\n", request)
 		response, err := api.httpClient.Do(request)
 		if err != nil {
 			return playlist, err
 		}
-		bd, _ := io.ReadAll(response.Body)
-		log.Println("Response:", string(bd))
 		if response.StatusCode != 200 {
 			return playlist, errors.New("SpotifyAPI.GetLiked: " + response.Status)
 		}

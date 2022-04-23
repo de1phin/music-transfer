@@ -2,6 +2,7 @@ package yandex
 
 import (
 	"errors"
+	"time"
 
 	"github.com/de1phin/music-transfer/internal/api/yandex"
 	"github.com/de1phin/music-transfer/internal/log"
@@ -9,7 +10,10 @@ import (
 	"github.com/de1phin/music-transfer/internal/storage"
 )
 
-const likedPlaylistID = 3
+const (
+	likedPlaylistID = 3
+	requestDelayMs  = 1700
+)
 
 type Yandex struct {
 	api     *yandex.YandexAPI
@@ -29,16 +33,16 @@ func (*Yandex) Name() string {
 	return "yandex"
 }
 
-func (ya *Yandex) GetLiked(userID int64) (*mux.Playlist, error) {
+func (ya *Yandex) GetLiked(userID int64) (mux.Playlist, error) {
 	credentials, err := ya.storage.Get(userID)
 	if err != nil {
-		return nil, err
+		return mux.Playlist{}, err
 	}
 	liked, err := ya.api.GetPlaylist(likedPlaylistID, &credentials)
 	if err != nil {
-		return nil, err
+		return mux.Playlist{}, err
 	}
-	result := &mux.Playlist{}
+	result := mux.Playlist{}
 	result.Title = liked.Title
 	for _, track := range liked.Tracks {
 		if track.Type != "music" {
@@ -111,12 +115,13 @@ func (ya *Yandex) AddLiked(userID int64, liked mux.Playlist) error {
 	if err != nil {
 		return err
 	}
-	csrf, err := ya.api.GetAuthCSRF(&credentials)
+	authTokens, err := ya.api.GetAuthTokens(&credentials)
 	if err != nil {
 		return err
 	}
 
 	for _, song := range liked.Songs {
+		time.Sleep(time.Millisecond * requestDelayMs)
 		track, err := ya.api.SearchTrack(song.Title, song.Artists)
 		if err != nil {
 			return err
@@ -124,9 +129,58 @@ func (ya *Yandex) AddLiked(userID int64, liked mux.Playlist) error {
 		if track == nil {
 			continue
 		}
-		err = ya.api.LikeTrack(track, &credentials, csrf)
+		time.Sleep(time.Millisecond * requestDelayMs)
+		err = ya.api.LikeTrack(track, &credentials, authTokens)
 		if err != nil {
-			return err
+			ya.logger.Log("Yandex.AddLiked:", err)
+		}
+	}
+
+	return nil
+}
+
+func (ya *Yandex) addPlaylist(playlist mux.Playlist, credentials *yandex.Credentials, authTokens *yandex.AuthTokens) error {
+	playlistSnippet, err := ya.api.AddPlaylist(playlist.Title, credentials, authTokens)
+	if err != nil {
+		return err
+	}
+
+	tracks := []yandex.TrackSnippet{}
+	for _, s := range playlist.Songs {
+		time.Sleep(time.Millisecond * requestDelayMs)
+		t, err := ya.api.SearchTrack(s.Title, s.Artists)
+		if err != nil {
+			ya.logger.Log(errors.New("Yandex.AddPlaylists:" + err.Error()))
+			continue
+		}
+		if t == nil || len(t.Albums) == 0 {
+			ya.logger.Log(errors.New("Yandex.AddPlaylists: Bad track returned:"), t)
+			continue
+		}
+		tracks = append(tracks, yandex.TrackSnippet{
+			ID:      t.ID,
+			AlbumID: t.Albums[0].ID,
+		})
+	}
+	time.Sleep(time.Millisecond * requestDelayMs)
+	return ya.api.AddToPlaylist(tracks, playlistSnippet, credentials, authTokens)
+}
+
+func (ya *Yandex) AddPlaylists(userID int64, playlist []mux.Playlist) error {
+	credentials, err := ya.storage.Get(userID)
+	if err != nil {
+		return err
+	}
+	authTokens, err := ya.api.GetAuthTokens(&credentials)
+	if err != nil {
+		return err
+	}
+
+	for _, p := range playlist {
+		err = ya.addPlaylist(p, &credentials, authTokens)
+		if err != nil {
+			ya.logger.Log("Yandex.AddPlaylists:", err)
+			continue
 		}
 	}
 

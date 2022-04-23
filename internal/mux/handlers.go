@@ -2,7 +2,6 @@ package mux
 
 import (
 	"fmt"
-	"log"
 	"strings"
 	"time"
 )
@@ -72,7 +71,6 @@ func (mux *Mux) HandleChoosingSrc(from Interactor, msg Message, internalID int64
 						strings.Title(service.Name()) + "</text><link><![CDATA[" + authURL +
 						"]]></link></url></content>",
 				})
-				log.Println("wait for", internalID)
 				timeLimit := time.Now().Add(time.Second * 60)
 				for {
 					time.Sleep(3 * time.Second)
@@ -89,7 +87,6 @@ func (mux *Mux) HandleChoosingSrc(from Interactor, msg Message, internalID int64
 						break
 					}
 				}
-				log.Println("stop")
 			}
 
 			mux.transferStorage.Put(internalID, service)

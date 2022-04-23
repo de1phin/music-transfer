@@ -74,8 +74,6 @@ func (t *Table[Key, T]) Put(key Key, val T) error {
 		query += c + "=:" + c
 	}
 	query += " WHERE " + t.key + " = " + fmt.Sprintf("%v", key)
-	fmt.Println(query)
-	fmt.Println("Put", val)
 	_, err = t.psql.NamedExec(query, val)
 	return err
 }

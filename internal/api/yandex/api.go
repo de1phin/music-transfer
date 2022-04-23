@@ -2,6 +2,7 @@ package yandex
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -50,7 +51,7 @@ func (api *YandexAPI) GetLibrary(credentials *Credentials) (*Library, error) {
 	if err != nil {
 		return nil, err
 	}
-	url := "https://music.yandex.ru/handlers/library.jsx?owner=" + user.Login + "&filter=playlists&playlistsWithoutContent=true"
+	url := "https://music.yandex.ru/handlers/library.jsx?owner=" + user.Login + "&filter=playlists&playlistWithoutTracks=true"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -75,6 +76,7 @@ func (api *YandexAPI) GetLibrary(credentials *Credentials) (*Library, error) {
 		return nil, err
 	}
 	library := Library{}
+	api.logger.Log(string(body))
 	err = json.Unmarshal(body, &library)
 
 	return &library, err
@@ -143,8 +145,6 @@ func (api *YandexAPI) SearchTrack(title string, artists string) (*Track, error) 
 		return nil, err
 	}
 
-	api.logger.Log(search)
-
 	if len(search.Tracks.Items) == 0 {
 		return nil, nil
 	} else {
@@ -152,45 +152,47 @@ func (api *YandexAPI) SearchTrack(title string, artists string) (*Track, error) 
 			ID:      strconv.FormatInt(search.Tracks.Items[0].ID, 10),
 			Title:   search.Tracks.Items[0].Title,
 			Artists: search.Tracks.Items[0].Artist,
+			Albums:  search.Tracks.Items[0].Albums,
 			Type:    search.Tracks.Items[0].Type,
 		}
 		return track, nil
 	}
 }
 
-func (api *YandexAPI) GetAuthCSRF(credentials *Credentials) (string, error) {
-	url := "https://music.yandex.ru/api/v2.1/handlers/auth"
-	req, err := http.NewRequest("GET", url, nil)
+func (api *YandexAPI) GetAuthTokens(credentials *Credentials) (*AuthTokens, error) {
+	requrl := "https://music.yandex.ru/handlers/auth.jsx"
+	req, err := http.NewRequest("GET", requrl, nil)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	req.Header.Add("Cookie", credentials.Cookies)
-	req.Header.Add("X-Retpath-Y", "https%3A%2F%2Fmusic.yandex.ru%2Fusers%2F"+credentials.Login+"%2Fplaylists%2F1015")
+	req.Header.Add("Referer", url.QueryEscape("https://music.yandex.ru/users/"+credentials.Login+"/playlists"))
+	req.Header.Add("X-Retpath-Y", url.QueryEscape("https://music.yandex.ru/users/"+credentials.Login+"/playlists"))
 
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return "", errors.New("YandexAPI.GetAuthCSRF: Status: " + resp.Status)
+		return nil, errors.New("YandexAPI.GetAuthTokens: Status: " + resp.Status)
 	}
 	if resp.Body == nil {
-		return "", errors.New("YandexAPI.GetAuthCSRF: Empty body returned")
+		return nil, errors.New("YandexAPI.GetAuthTokens: Empty body returned")
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	authHandlerResponse := authHandlerResponse{}
-	err = json.Unmarshal(body, &authHandlerResponse)
+	authTokens := authTokensResponse{}
+	err = json.Unmarshal(body, &authTokens)
 
-	return authHandlerResponse.Csrf, err
+	return &authTokens.User, err
 }
 
-func (api *YandexAPI) LikeTrack(track *Track, credentials *Credentials, csrf string) error {
-	data := "sign=" + url.QueryEscape(csrf)
+func (api *YandexAPI) LikeTrack(track *Track, credentials *Credentials, authTokens *AuthTokens) error {
+	data := "sign=" + url.QueryEscape(authTokens.Sign)
 	url := "https://music.yandex.ru/api/v2.1/handlers/track/" + track.ID + "/web-own_playlists-playlist-track-main/like/add"
 	req, err := http.NewRequest("POST", url, strings.NewReader(data))
 	if err != nil {
@@ -209,6 +211,78 @@ func (api *YandexAPI) LikeTrack(track *Track, credentials *Credentials, csrf str
 	}
 	if resp.Body == nil {
 		return errors.New("YandexAPI.LikeTrack: Empty body returned")
+	}
+
+	return nil
+}
+
+func (api *YandexAPI) AddPlaylist(title string, credentials *Credentials, authTokens *AuthTokens) (*PlaylistSnippet, error) {
+	data := "action=add&title=" + url.QueryEscape(title) + "&sign=" + url.QueryEscape(authTokens.Sign) +
+		"&external-domain=music.yandex.ru&overembed=false&lang=ru"
+	url := "https://music.yandex.ru/handlers/change-playlist.jsx"
+	req, err := http.NewRequest("POST", url, strings.NewReader(data))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Add("Cookie", credentials.Cookies)
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Referer", "https://music.yandex.ru/users/"+credentials.Login+"/playlists")
+	req.Header.Add("X-Retpath-Y", "https://music.yandex.ru/users/"+credentials.Login+"/playlists")
+
+	resp, err := api.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("YandexAPI.AddPlaylist: Status: " + resp.Status)
+	}
+	if resp.Body == nil {
+		return nil, errors.New("YandexAPI.AddPlaylist: Empty body returned")
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	snippet := playlistAddResponse{}
+	err = json.Unmarshal(body, &snippet)
+
+	return &snippet.Playlist, err
+}
+
+func (api *YandexAPI) AddToPlaylist(tracks []TrackSnippet, playlist *PlaylistSnippet, credentials *Credentials, authTokens *AuthTokens) error {
+	diff := playlistPatchDifference{
+		At:        0,
+		Operation: "insert",
+		Tracks:    tracks,
+	}
+	diffstr, err := json.Marshal(diff)
+	if err != nil {
+		return err
+	}
+	data := fmt.Sprintf("revision=1&owner=%s&kind=%d&diff=[%s]&sign=%s", credentials.UID, playlist.Kind, url.QueryEscape(string(diffstr)), url.QueryEscape(authTokens.Sign))
+	url := "https://music.yandex.ru/handlers/playlist-patch.jsx"
+	req, err := http.NewRequest("POST", url, strings.NewReader(data))
+	if err != nil {
+		return err
+	}
+	req.Header.Add("Cookie", credentials.Cookies)
+	req.Header.Add("Accept", "application/json")
+	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Referer", "https://music.yandex.ru/users/"+credentials.Login+"/playlists")
+	req.Header.Add("X-Current-UID", credentials.UID)
+	req.Header.Add("X-Retpath-Y", "https://music.yandex.ru/users/"+credentials.Login+"/playlists")
+
+	resp, err := api.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("YandexAPI.AddToPlaylist: Status: " + resp.Status)
+	}
+	if resp.Body == nil {
+		return errors.New("YandexAPI.AddToPlaylist: Empty body returned")
 	}
 
 	return nil
