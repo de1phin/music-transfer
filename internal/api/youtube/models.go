@@ -1,7 +1,7 @@
 package youtube
 
 type Credentials struct {
-	AccessToken string `json:"access_token"`
+	AccessToken string `json:"access_token" db:"access_token"`
 }
 
 type YoutubeConfig struct {

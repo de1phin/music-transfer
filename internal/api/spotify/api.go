@@ -164,7 +164,10 @@ func (api *SpotifyAPI) GetUserPlaylists(tokens Credentials) ([]Playlist, error) 
 		if err != nil {
 			return playlists, err
 		}
-		json.Unmarshal(body, &spotifyPlaylists)
+		err = json.Unmarshal(body, &spotifyPlaylists)
+		if err != nil {
+			return nil, err
+		}
 
 		playlists = append(playlists, spotifyPlaylists.Items...)
 
@@ -205,7 +208,10 @@ func (api *SpotifyAPI) GetPlaylistTracks(tokens Credentials, playlistID string) 
 		if err != nil {
 			return items, err
 		}
-		json.Unmarshal(body, &tracks)
+		err = json.Unmarshal(body, &tracks)
+		if err != nil {
+			return nil, err
+		}
 		items = append(items, tracks.Items...)
 
 		offset += limit

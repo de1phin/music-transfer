@@ -23,7 +23,7 @@ func (api *YandexAPI) GetMe(credentials *Credentials) (*User, error) {
 
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.GetMe: " + err.Error())
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New("YandexAPI.GetMe: Status: " + resp.Status)
@@ -34,7 +34,7 @@ func (api *YandexAPI) GetMe(credentials *Credentials) (*User, error) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.GetMe: " + err.Error())
 	}
 	acc := Accounts{}
 	json.Unmarshal(body, &acc)
@@ -49,12 +49,12 @@ func (api *YandexAPI) GetMe(credentials *Credentials) (*User, error) {
 func (api *YandexAPI) GetLibrary(credentials *Credentials) (*Library, error) {
 	user, err := api.GetMe(credentials)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.GetLibrary: " + err.Error())
 	}
-	url := "https://music.yandex.ru/handlers/library.jsx?owner=" + user.Login + "&filter=playlists&playlistWithoutTracks=true"
+	url := "https://music.yandex.ru/handlers/library.jsx?owner=" + user.Login + "&filter=playlists"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.GetLibrary: " + err.Error())
 	}
 	req.Header.Add("Cookie", credentials.Cookies)
 	req.Header.Add("Accept", "application/json")
@@ -62,7 +62,7 @@ func (api *YandexAPI) GetLibrary(credentials *Credentials) (*Library, error) {
 
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.GetLibrary: " + err.Error())
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New("YandexAPI.GetLibrary: Status: " + resp.Status)
@@ -73,24 +73,26 @@ func (api *YandexAPI) GetLibrary(credentials *Credentials) (*Library, error) {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.GetLibrary: " + err.Error())
 	}
 	library := Library{}
-	api.logger.Log(string(body))
 	err = json.Unmarshal(body, &library)
+	if err != nil {
+		return nil, errors.New("YandexAPI.GetLibrary: " + err.Error())
+	}
 
-	return &library, err
+	return &library, nil
 }
 
 func (api *YandexAPI) GetPlaylist(ID int64, credentials *Credentials) (*Playlist, error) {
 	user, err := api.GetMe(credentials)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.GetPlaylist: " + err.Error())
 	}
 	url := "https://music.yandex.ru/handlers/playlist.jsx?owner=" + user.Login + "&kinds=" + strconv.FormatInt(ID, 10)
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.GetPlaylist: " + err.Error())
 	}
 	req.Header.Add("Cookie", credentials.Cookies)
 	req.Header.Add("Accept", "application/json")
@@ -98,21 +100,25 @@ func (api *YandexAPI) GetPlaylist(ID int64, credentials *Credentials) (*Playlist
 
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.GetPlaylist: " + err.Error())
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("YandexAPI.GetPlaylists: Status: " + resp.Status)
+		return nil, errors.New("YandexAPI.GetPlaylist: Status: " + resp.Status)
 	}
 	if resp.Body == nil {
-		return nil, errors.New("YandexAPI.GetPlaylists: Empty Body returned")
+		return nil, errors.New("YandexAPI.GetPlaylist: Empty Body returned")
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.GetPlaylist: " + err.Error())
 	}
 	playlistResponse := PlaylistResponse{}
 	err = json.Unmarshal(body, &playlistResponse)
+	if err != nil {
+		return nil, errors.New("YandexAPI.GetPlaylist: " + err.Error())
+	}
+
 	return &playlistResponse.Playlist, nil
 }
 
@@ -120,13 +126,13 @@ func (api *YandexAPI) SearchTrack(title string, artists string) (*Track, error) 
 	url := "https://music.yandex.ru/handlers/music-search.jsx?text=" + url.QueryEscape(title+" "+artists) + "&type=all"
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.SearchTrack: " + err.Error())
 	}
 	req.Header.Add("Accept", "application/json")
 
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.SearchTrack: " + err.Error())
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New("YandexAPI.SearchTrack: Status: " + resp.Status)
@@ -142,7 +148,7 @@ func (api *YandexAPI) SearchTrack(title string, artists string) (*Track, error) 
 	search := SearchResponse{}
 	err = json.Unmarshal(body, &search)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.SearchTrack: " + err.Error())
 	}
 
 	if len(search.Tracks.Items) == 0 {
@@ -163,7 +169,7 @@ func (api *YandexAPI) GetAuthTokens(credentials *Credentials) (*AuthTokens, erro
 	requrl := "https://music.yandex.ru/handlers/auth.jsx"
 	req, err := http.NewRequest("GET", requrl, nil)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.GetAuthTokens: " + err.Error())
 	}
 	req.Header.Add("Cookie", credentials.Cookies)
 	req.Header.Add("Referer", url.QueryEscape("https://music.yandex.ru/users/"+credentials.Login+"/playlists"))
@@ -171,7 +177,7 @@ func (api *YandexAPI) GetAuthTokens(credentials *Credentials) (*AuthTokens, erro
 
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.GetAuthTokens: " + err.Error())
 	}
 
 	if resp.StatusCode != http.StatusOK {
@@ -183,12 +189,15 @@ func (api *YandexAPI) GetAuthTokens(credentials *Credentials) (*AuthTokens, erro
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.GetAuthTokens: " + err.Error())
 	}
 	authTokens := authTokensResponse{}
 	err = json.Unmarshal(body, &authTokens)
+	if err != nil {
+		return nil, errors.New("YandexAPI.GetAuthTokens: " + err.Error())
+	}
 
-	return &authTokens.User, err
+	return &authTokens.User, nil
 }
 
 func (api *YandexAPI) LikeTrack(track *Track, credentials *Credentials, authTokens *AuthTokens) error {
@@ -196,7 +205,7 @@ func (api *YandexAPI) LikeTrack(track *Track, credentials *Credentials, authToke
 	url := "https://music.yandex.ru/api/v2.1/handlers/track/" + track.ID + "/web-own_playlists-playlist-track-main/like/add"
 	req, err := http.NewRequest("POST", url, strings.NewReader(data))
 	if err != nil {
-		return err
+		return errors.New("YandexAPI.LikeTrack: " + err.Error())
 	}
 	req.Header.Add("Cookie", credentials.Cookies)
 	req.Header.Add("Accept", "application/json")
@@ -204,7 +213,7 @@ func (api *YandexAPI) LikeTrack(track *Track, credentials *Credentials, authToke
 
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return err
+		return errors.New("YandexAPI.LikeTrack: " + err.Error())
 	}
 	if resp.StatusCode != http.StatusOK {
 		return errors.New("YandexAPI.LikeTrack: Status: " + resp.Status)
@@ -222,7 +231,7 @@ func (api *YandexAPI) AddPlaylist(title string, credentials *Credentials, authTo
 	url := "https://music.yandex.ru/handlers/change-playlist.jsx"
 	req, err := http.NewRequest("POST", url, strings.NewReader(data))
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.AddPlaylist: " + err.Error())
 	}
 	req.Header.Add("Cookie", credentials.Cookies)
 	req.Header.Add("Accept", "application/json")
@@ -232,7 +241,7 @@ func (api *YandexAPI) AddPlaylist(title string, credentials *Credentials, authTo
 
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.AddPlaylist: " + err.Error())
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.New("YandexAPI.AddPlaylist: Status: " + resp.Status)
@@ -243,12 +252,15 @@ func (api *YandexAPI) AddPlaylist(title string, credentials *Credentials, authTo
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("YandexAPI.AddPlaylist: " + err.Error())
 	}
 	snippet := playlistAddResponse{}
 	err = json.Unmarshal(body, &snippet)
+	if err != nil {
+		return nil, errors.New("YandexAPI.AddPlaylist: " + err.Error())
+	}
 
-	return &snippet.Playlist, err
+	return &snippet.Playlist, nil
 }
 
 func (api *YandexAPI) AddToPlaylist(tracks []TrackSnippet, playlist *PlaylistSnippet, credentials *Credentials, authTokens *AuthTokens) error {
@@ -259,13 +271,13 @@ func (api *YandexAPI) AddToPlaylist(tracks []TrackSnippet, playlist *PlaylistSni
 	}
 	diffstr, err := json.Marshal(diff)
 	if err != nil {
-		return err
+		return errors.New("YandexAPI.AddToPlaylist: " + err.Error())
 	}
 	data := fmt.Sprintf("revision=1&owner=%s&kind=%d&diff=[%s]&sign=%s", credentials.UID, playlist.Kind, url.QueryEscape(string(diffstr)), url.QueryEscape(authTokens.Sign))
 	url := "https://music.yandex.ru/handlers/playlist-patch.jsx"
 	req, err := http.NewRequest("POST", url, strings.NewReader(data))
 	if err != nil {
-		return err
+		return errors.New("YandexAPI.AddToPlaylist: " + err.Error())
 	}
 	req.Header.Add("Cookie", credentials.Cookies)
 	req.Header.Add("Accept", "application/json")
@@ -276,7 +288,7 @@ func (api *YandexAPI) AddToPlaylist(tracks []TrackSnippet, playlist *PlaylistSni
 
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return err
+		return errors.New("YandexAPI.AddToPlaylist: " + err.Error())
 	}
 	if resp.StatusCode != http.StatusOK {
 		return errors.New("YandexAPI.AddToPlaylist: Status: " + resp.Status)

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strings"
 )
 
@@ -135,37 +134,10 @@ func (api *YoutubeAPI) LikeVideo(tokens Credentials, videoID string) error {
 	if err != nil {
 		return err
 	}
-	if response.StatusCode != 200 {
+	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNoContent {
 		return errors.New("YoutubeAPI.LikeVideo: Response Status: " + response.Status)
 	}
 	return nil
-}
-
-func (api *YoutubeAPI) SearchVideo(title string, artists string) (string, error) {
-	query := "https://youtube.com/results?search_query=" + strings.Map(func(r rune) rune {
-		if r == ' ' {
-			return '+'
-		} else {
-			return r
-		}
-	}, url.QueryEscape(title+"+"+artists))
-	response, err := http.Get(query)
-	if err != nil {
-		return "", err
-	}
-	if response.StatusCode != 200 {
-		return "", errors.New("YoutubeAPI.SearchVideo: Response Status: " + response.Status)
-	}
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return "", err
-	}
-	idx := bytes.Index(body, []byte("/watch?v="))
-	if idx == -1 {
-		return "", errors.New("YoutubeAPI.SearchVideo: No video in response")
-	}
-	idx2 := bytes.Index(body[idx:], []byte("\""))
-	return string(body[idx+9 : idx+idx2]), nil
 }
 
 func (api *YoutubeAPI) CreatePlaylist(tokens Credentials, title string) (Playlist, error) {
@@ -191,9 +163,9 @@ func (api *YoutubeAPI) CreatePlaylist(tokens Credentials, title string) (Playlis
 		return Playlist{}, err
 	}
 	playlist := Playlist{}
-	json.Unmarshal(body, &playlist)
+	err = json.Unmarshal(body, &playlist)
 
-	return playlist, nil
+	return playlist, err
 }
 
 func (api *YoutubeAPI) AddToPlaylist(tokens Credentials, playlistID string, videoID string) error {

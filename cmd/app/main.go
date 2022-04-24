@@ -48,7 +48,7 @@ func main() {
 	spotify := spotify.NewSpotifyService(spotifyConfig, "http://"+config.GetServerHostname(), spotifyAPI, spotifyStorage)
 	spotifyAPI.BindHandler(server.ServeMux, spotify.OnGetTokens)
 
-	youtubeStorage := cache.NewCacheStorage[int64, youtubeAPI.Credentials]()
+	youtubeStorage := postgres.NewTable[int64, youtubeAPI.Credentials](psql, "Youtube", "id")
 	youtubeConfig := youtubeAPI.YoutubeConfig{
 		APIKey:       config.GetYouTubeApiKEY(),
 		ClientID:     config.GetYouTubeClientID(),
@@ -57,7 +57,7 @@ func main() {
 		RedirectURI:  "http://" + config.GetServerHostname() + "/youtube",
 	}
 	youtubeAPI := youtubeAPI.NewYoutubeAPI(&youtubeConfig)
-	youtube := youtube.NewYouTubeService(youtubeAPI, youtubeStorage, &youtubeConfig)
+	youtube := youtube.NewYouTubeService(youtubeAPI, youtubeStorage, &youtubeConfig, fileLogger)
 	youtubeAPI.BindHandler(server.ServeMux, youtube.OnGetTokens)
 
 	yandexStorage := postgres.NewTable[int64, yandexAPI.Credentials](psql, "Yandex", "id")
@@ -96,7 +96,7 @@ func main() {
 	go server.Run()
 
 	muxQuit := make(chan struct{})
-	mux.Run(muxQuit)
+	go mux.Run(muxQuit)
 
 	c := make(chan os.Signal)
 	<-c

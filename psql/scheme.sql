@@ -10,3 +10,8 @@ CREATE TABLE IF NOT EXISTS Spotify (
     access_token VARCHAR,
     refresh_token VARCHAR
 );
+
+CREATE TABLE IF NOT EXISTS Youtube (
+    id INT PRIMARY KEY UNIQUE NOT NULL,
+    access_token VARCHAR
+);

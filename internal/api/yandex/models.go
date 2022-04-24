@@ -49,11 +49,10 @@ type PlaylistSnippet struct {
 }
 
 type Playlist struct {
-	Title      string   `json:"title"`
-	Kind       int      `json:"kind"`
-	TrackCount int      `json:"trackCount"`
-	TrackIDs   []string `json:"trackIds"`
-	Tracks     []Track  `json:"tracks"`
+	Title      string  `json:"title"`
+	Kind       int     `json:"kind"`
+	TrackCount int     `json:"trackCount"`
+	Tracks     []Track `json:"tracks"`
 }
 
 type Track struct {
@@ -75,9 +74,9 @@ type Artist struct {
 }
 
 type Library struct {
-	Owner       Owner      `json:"owner"`
-	Playlists   []Playlist `json:"playlists"`
-	PlaylistIDs []int64    `json:"playlistIds"`
+	Owner       Owner             `json:"owner"`
+	Playlists   []PlaylistSnippet `json:"playlists"`
+	PlaylistIDs []int64           `json:"playlistIds"`
 }
 
 type PlaylistResponse struct {

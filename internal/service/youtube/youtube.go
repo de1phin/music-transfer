@@ -1,7 +1,10 @@
 package youtube
 
 import (
+	"time"
+
 	"github.com/de1phin/music-transfer/internal/api/youtube"
+	"github.com/de1phin/music-transfer/internal/log"
 	"github.com/de1phin/music-transfer/internal/mux"
 	"github.com/de1phin/music-transfer/internal/storage"
 )
@@ -10,13 +13,15 @@ type youtubeService struct {
 	tokenStorage storage.Storage[int64, youtube.Credentials]
 	config       *youtube.YoutubeConfig
 	api          *youtube.YoutubeAPI
+	logger       log.Logger
 }
 
-func NewYouTubeService(api *youtube.YoutubeAPI, tokenStorage storage.Storage[int64, youtube.Credentials], config *youtube.YoutubeConfig) *youtubeService {
+func NewYouTubeService(api *youtube.YoutubeAPI, tokenStorage storage.Storage[int64, youtube.Credentials], config *youtube.YoutubeConfig, logger log.Logger) *youtubeService {
 	return &youtubeService{
 		tokenStorage: tokenStorage,
 		config:       config,
 		api:          api,
+		logger:       logger,
 	}
 }
 
@@ -51,11 +56,13 @@ func (yt *youtubeService) AddLiked(userID int64, liked mux.Playlist) error {
 	for _, song := range liked.Songs {
 		videoID, err := yt.api.SearchVideo(song.Title, song.Artists)
 		if err != nil {
-			return err
+			yt.logger.Log("Youtube.AddLiked:", err)
+			continue
 		}
 		err = yt.api.LikeVideo(tokens, videoID)
 		if err != nil {
-			return err
+			yt.logger.Log("Youtube.AddLiked:", err)
+			continue
 		}
 	}
 	return nil
@@ -121,11 +128,17 @@ func (yt *youtubeService) AddPlaylists(userID int64, playlists []mux.Playlist) e
 		}
 
 		for _, v := range playlist.Songs {
+			time.Sleep(time.Millisecond * 50)
 			videoID, err := yt.api.SearchVideo(v.Title, v.Artists)
 			if err != nil {
-				return err
+				yt.logger.Log("Youtube.AddPlaylists:", err)
+				continue
 			}
-			yt.api.AddToPlaylist(tokens, playlistID, videoID)
+			err = yt.api.AddToPlaylist(tokens, playlistID, videoID)
+			if err != nil {
+				yt.logger.Log("Youtube.AddPlaylists:", err)
+				continue
+			}
 		}
 	}
 	return nil
