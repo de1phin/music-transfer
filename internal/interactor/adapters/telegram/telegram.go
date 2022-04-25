@@ -1,7 +1,6 @@
 package telegram
 
 import (
-	"encoding/xml"
 	"strconv"
 	"strings"
 
@@ -39,49 +38,31 @@ func encodeUserState(us mux.UserState) string {
 }
 
 func (ta *TelegramAdapter) SendMessage(msg mux.Message) error {
-	content := mux.Content{}
-	xml.Unmarshal([]byte(msg.Content), &content)
 	Buttons := make([]telegram.Button, 0)
 	URLButtons := make([]telegram.Button, 0)
-	for _, i := range content.Button {
+	for _, button := range msg.Content.Buttons {
 		Buttons = append(Buttons, telegram.Button{
-			Text: i,
+			Text: button,
 			Data: encodeUserState(msg.UserState),
 		})
 	}
-	for _, i := range content.URL {
+	for _, url := range msg.Content.URLs {
 		URLButtons = append(URLButtons, telegram.Button{
-			Text: i.Text,
-			Data: i.Link,
+			Text: url.Text,
+			Data: url.Link,
 		})
 	}
-	for _, i := range content.Either {
-		if i.Button != "" {
-			Buttons = append(Buttons, telegram.Button{
-				Text: i.Button,
-				Data: encodeUserState(msg.UserState),
-			})
-			continue
-		}
-		if i.URL.Link != "" {
-			URLButtons = append(URLButtons, telegram.Button{
-				Text: i.URL.Text,
-				Data: i.URL.Link,
-			})
-		}
-	}
-	return ta.Telegram.SendMessage(msg.UserID, strings.Join(content.Text, "\n"), Buttons, URLButtons)
+
+	return ta.Telegram.SendMessage(msg.UserID, msg.Content.Text, Buttons, URLButtons)
 }
 
-func (ta *TelegramAdapter) GetMessage() (mux.Message, error) {
+func (ta *TelegramAdapter) GetMessage() (msg mux.Message, err error) {
 	telegramMessage, err := ta.Telegram.GetMessage()
 	if err != nil {
 		return mux.Message{}, err
 	}
-	msg := mux.Message{
-		Content: strings.ToLower(strings.Trim(telegramMessage.Text, " \n\r\t")),
-		UserID:  telegramMessage.ChatID,
-	}
+	msg.Content.Text = strings.ToLower(strings.Trim(telegramMessage.Text, " \n\r\t"))
+	msg.UserID = telegramMessage.ChatID
 	if telegramMessage.Data == "" {
 		msg.UserState, err = ta.userStateStorage.Get(msg.UserID)
 		if err != nil {
@@ -97,6 +78,5 @@ func (ta *TelegramAdapter) GetMessage() (mux.Message, error) {
 		}
 		msg.UserState = us
 	}
-	msg.Content = strings.ToLower(strings.Trim(msg.Content, " \n\r\t"))
-	return msg, nil
+	return msg, err
 }

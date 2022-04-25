@@ -1,11 +1,15 @@
 package mux
 
-import "encoding/xml"
-
 type Message struct {
 	UserID    int64
 	UserState UserState
-	Content   string
+	Content   MessageContent
+}
+
+type MessageContent struct {
+	Text    string
+	URLs    []URL
+	Buttons []string
 }
 
 type Transfer Service
@@ -27,14 +31,6 @@ type Either struct {
 type URL struct {
 	Link string `xml:"link"`
 	Text string `xml:"text"`
-}
-
-type Content struct {
-	XMLName xml.Name `xml:"content"`
-	Text    []string `xml:"text"`
-	URL     []URL    `xml:"url"`
-	Button  []string `xml:"button"`
-	Either  []Either `xml:"either"`
 }
 
 type Song struct {

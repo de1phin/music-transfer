@@ -1,7 +1,6 @@
 package console
 
 import (
-	"encoding/xml"
 	"strings"
 
 	"github.com/de1phin/music-transfer/internal/interactor/interactors/console"
@@ -26,39 +25,25 @@ func (*ConsoleAdapter) Name() string {
 	return "console"
 }
 
-func (ca *ConsoleAdapter) GetMessage() (mux.Message, error) {
+func (ca *ConsoleAdapter) GetMessage() (msg mux.Message, err error) {
 	text, err := ca.console.GetMessage()
 	if err != nil {
-		return mux.Message{}, err
+		return msg, err
 	}
-	msg := mux.Message{
-		UserID:    ca.defaultUserID,
-		UserState: ca.userState,
-		Content:   strings.ToLower(strings.Trim(text, " \n\r\t")),
-	}
-	return msg, nil
+	msg.UserID = ca.defaultUserID
+	msg.UserState = ca.userState
+	msg.Content.Text = strings.ToLower(strings.Trim(text, " \n\r\t"))
+	return msg, err
 }
 
 func (ca *ConsoleAdapter) SendMessage(msg mux.Message) error {
 	ca.userState = msg.UserState
-	content := mux.Content{}
-	xml.Unmarshal([]byte(msg.Content), &content)
-	text := ""
-	for _, i := range content.Text {
-		text += i + "\n"
+	text := msg.Content.Text + "\n"
+	for _, button := range msg.Content.Buttons {
+		text += button + "\n"
 	}
-	for _, i := range content.Either {
-		if i.Text != "" {
-			text += i.Text + "\n"
-		}
-	}
-	for _, i := range content.URL {
-		text += i.Link + "\n"
-	}
-	for _, i := range content.Either {
-		if i.Text == "" && i.URL.Link != "" {
-			text += i.URL.Link + "\n"
-		}
+	for _, url := range msg.Content.URLs {
+		text += url.Link + "\n"
 	}
 	return ca.console.SendMessage(text)
 }

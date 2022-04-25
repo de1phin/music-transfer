@@ -1,7 +1,6 @@
 package mux
 
 import (
-	"fmt"
 	"strings"
 	"time"
 )
@@ -26,24 +25,24 @@ func (mux *Mux) handleError(err error, from Interactor, msg Message) {
 	from.SendMessage(Message{
 		UserID:    msg.UserID,
 		UserState: msg.UserState,
-		Content:   "<content><text>An error occured</text></content>",
+		Content: MessageContent{
+			Text: "An error occured",
+		},
 	})
 }
 
 func (mux *Mux) HandleIdle(from Interactor, msg Message, internalID int64) bool {
-	services := ""
+	services := []string{}
 	for _, service := range mux.services {
-		services += fmt.Sprintf(`
-			<either>
-				<text>%s</text>
-				<button>%s</button>
-			</either>`,
-			strings.Title(service.Name()), strings.Title(service.Name()))
+		services = append(services, strings.Title(service.Name()))
 	}
 	from.SendMessage(Message{
 		UserState: ChoosingSrc,
 		UserID:    msg.UserID,
-		Content:   "<content>\n<text>Choose source service:</text>\n" + services + "</content>",
+		Content: MessageContent{
+			Text:    "Choose source service:",
+			Buttons: services,
+		},
 	})
 
 	return true
@@ -51,7 +50,7 @@ func (mux *Mux) HandleIdle(from Interactor, msg Message, internalID int64) bool 
 
 func (mux *Mux) HandleChoosingSrc(from Interactor, msg Message, internalID int64) bool {
 	for _, service := range mux.services {
-		if service.Name() == msg.Content {
+		if service.Name() == msg.Content.Text {
 			authorized, err := service.Authorized(internalID)
 			if err != nil {
 				mux.handleError(err, from, msg)
@@ -67,9 +66,13 @@ func (mux *Mux) HandleChoosingSrc(from Interactor, msg Message, internalID int64
 				from.SendMessage(Message{
 					UserID:    msg.UserID,
 					UserState: ChoosingDst,
-					Content: "<content><text>Please log into the service:</text><url><text>" +
-						strings.Title(service.Name()) + "</text><link><![CDATA[" + authURL +
-						"]]></link></url></content>",
+					Content: MessageContent{
+						Text: "Please log into the service",
+						URLs: []URL{{
+							Text: strings.Title(service.Name()),
+							Link: authURL,
+						}},
+					},
 				})
 				timeLimit := time.Now().Add(time.Second * 60)
 				for {
@@ -90,19 +93,17 @@ func (mux *Mux) HandleChoosingSrc(from Interactor, msg Message, internalID int64
 			}
 
 			mux.transferStorage.Put(internalID, service)
-			services := ""
+			services := []string{}
 			for _, service := range mux.services {
-				services += fmt.Sprintf(`
-				<either>
-					<text>%s</text>
-					<button>%s</button>
-				</either>`,
-					strings.Title(service.Name()), strings.Title(service.Name()))
+				services = append(services, strings.Title(service.Name()))
 			}
 			from.SendMessage(Message{
 				UserState: ChoosingDst,
 				UserID:    msg.UserID,
-				Content:   "<content><text>Choose destination service:</text>\n" + services + "</content>",
+				Content: MessageContent{
+					Text:    "Choose destination service:",
+					Buttons: services,
+				},
 			})
 			return true
 		}
@@ -111,14 +112,14 @@ func (mux *Mux) HandleChoosingSrc(from Interactor, msg Message, internalID int64
 	from.SendMessage(Message{
 		UserState: Idle,
 		UserID:    msg.UserID,
-		Content:   "<content><text>Invalid service</text></content>",
+		Content:   MessageContent{},
 	})
 	return true
 }
 
 func (mux *Mux) HandleChoosingDst(from Interactor, msg Message, internalID int64) bool {
 	for _, service := range mux.services {
-		if service.Name() == msg.Content {
+		if service.Name() == msg.Content.Text {
 			authorized, err := service.Authorized(internalID)
 			if err != nil {
 				mux.handleError(err, from, msg)
@@ -133,10 +134,14 @@ func (mux *Mux) HandleChoosingDst(from Interactor, msg Message, internalID int64
 
 				from.SendMessage(Message{
 					UserID:    msg.UserID,
-					UserState: Idle,
-					Content: "<content><text>Please log into the service:</text><url><text>" +
-						strings.Title(service.Name()) + "</text><link><![CDATA[" + authURL +
-						"]]></link></url></content>",
+					UserState: ChoosingDst,
+					Content: MessageContent{
+						Text: "Please log into the service",
+						URLs: []URL{{
+							Text: strings.Title(service.Name()),
+							Link: authURL,
+						}},
+					},
 				})
 
 				timeLimit := time.Now().Add(time.Second * 60)
@@ -158,20 +163,17 @@ func (mux *Mux) HandleChoosingDst(from Interactor, msg Message, internalID int64
 
 			src, err := mux.transferStorage.Get(internalID)
 			if err != nil {
-				from.SendMessage(Message{
-					UserID:    msg.UserID,
-					UserState: Idle,
-					Content:   "<content><text>An error occured</text></content>",
-				})
-				mux.logger.Log("Mux.HandleChoosingDst:", err)
+				mux.handleError(err, from, msg)
 				return true
 			}
 
 			from.SendMessage(Message{
 				UserID:    msg.UserID,
 				UserState: Idle,
-				Content: "<content><text>Transfering from " + strings.Title(src.Name()) +
-					" to " + strings.Title(service.Name()) + "</text></content>",
+				Content: MessageContent{
+					Text: "Transfering from " + strings.Title(src.Name()) +
+						" to " + strings.Title(service.Name()),
+				},
 			})
 
 			liked, err := src.GetLiked(internalID)
@@ -202,7 +204,9 @@ func (mux *Mux) HandleChoosingDst(from Interactor, msg Message, internalID int64
 	from.SendMessage(Message{
 		UserState: Idle,
 		UserID:    msg.UserID,
-		Content:   "<content><text>Invalid service</text></content>",
+		Content: MessageContent{
+			Text: "Invalid service",
+		},
 	})
 	return true
 }
