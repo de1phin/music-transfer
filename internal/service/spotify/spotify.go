@@ -147,7 +147,10 @@ func (spotify *spotifyService) AddPlaylists(userID int64, playlists []mux.Playli
 			}
 			tracks = append(tracks, search[0])
 		}
-		spotify.api.AddToPlaylist(tokens, playlistID, tracks)
+		err = spotify.api.AddToPlaylist(tokens, playlistID, tracks)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

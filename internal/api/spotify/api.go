@@ -118,9 +118,9 @@ func (api *SpotifyAPI) LikeTracks(tokens Credentials, tracks []Track) error {
 		if len(tracks)-i < limit {
 			limit = len(tracks) - i
 		}
-		ids := make([]string, i+limit)
+		ids := make([]string, limit)
 		for j := i; j < i+limit; j++ {
-			ids[j] = tracks[j].ID
+			ids[j-i] = tracks[j].ID
 		}
 		url := fmt.Sprintf("https://api.spotify.com/v1/me/tracks?ids=%s", strings.Join(ids, ","))
 
@@ -276,7 +276,7 @@ func (api *SpotifyAPI) CreatePlaylist(tokens Credentials, name string) (playlist
 	if err != nil {
 		return playlist, err
 	}
-	if response.StatusCode != http.StatusOK {
+	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusCreated {
 		return playlist, errors.New("SpotifyAPI.CreatePlaylist: " + response.Status)
 	}
 
@@ -301,11 +301,11 @@ func (api *SpotifyAPI) AddToPlaylist(tokens Credentials, playlistID string, trac
 			limit = len(tracks) - i
 		}
 
-		uris := make([]string, i+limit)
+		uris := make([]string, limit)
 		for j := i; j < i+limit; j++ {
-			uris[j] = tracks[j].URI
+			uris[j-i] = `"` + tracks[j].URI + `"`
 		}
-		data := "{\"uris\": [ \"" + strings.Join(uris, ",\n") + "\" ],\"position\":0}"
+		data := "{\"uris\": [ " + strings.Join(uris, ",") + " ],\"position\":0}"
 		dataReader := bytes.NewReader([]byte(data))
 
 		request, err := http.NewRequest("POST", "https://api.spotify.com/v1/playlists/"+playlistID+"/tracks", dataReader)
@@ -319,8 +319,13 @@ func (api *SpotifyAPI) AddToPlaylist(tokens Credentials, playlistID string, trac
 		if err != nil {
 			return err
 		}
-		if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNoContent {
+
+		if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusCreated {
 			return errors.New("SpotifyAPI.AddToPlaylist: " + response.Status)
+		}
+
+		if i+limit >= len(tracks) {
+			break
 		}
 	}
 	return nil
