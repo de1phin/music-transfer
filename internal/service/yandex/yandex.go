@@ -33,17 +33,16 @@ func (*Yandex) Name() string {
 	return "yandex"
 }
 
-func (ya *Yandex) GetLiked(userID int64) (mux.Playlist, error) {
+func (ya *Yandex) GetLiked(userID int64) (playlist mux.Playlist, err error) {
 	credentials, err := ya.storage.Get(userID)
 	if err != nil {
-		return mux.Playlist{}, err
+		return playlist, err
 	}
-	liked, err := ya.api.GetPlaylist(likedPlaylistID, &credentials)
+	liked, err := ya.api.GetPlaylist(likedPlaylistID, credentials)
 	if err != nil {
-		return mux.Playlist{}, err
+		return playlist, err
 	}
-	result := mux.Playlist{}
-	result.Title = liked.Title
+	playlist.Title = liked.Title
 	for _, track := range liked.Tracks {
 		if track.Type != "music" {
 			continue
@@ -59,36 +58,32 @@ func (ya *Yandex) GetLiked(userID int64) (mux.Playlist, error) {
 			artists += a.Name
 		}
 		song.Artists = artists
-		result.Songs = append(result.Songs, song)
+		playlist.Songs = append(playlist.Songs, song)
 	}
 
-	return result, nil
+	return playlist, nil
 }
 
-func (ya *Yandex) GetPlaylists(userID int64) ([]mux.Playlist, error) {
+func (ya *Yandex) GetPlaylists(userID int64) (playlist []mux.Playlist, err error) {
 	credentials, err := ya.storage.Get(userID)
 	if err != nil {
-		return nil, err
+		return playlist, err
 	}
-	library, err := ya.api.GetLibrary(&credentials)
+	library, err := ya.api.GetLibrary(credentials)
 	if err != nil {
-		return nil, err
-	}
-	if library == nil {
-		return nil, errors.New("YandexAPI.GetPlaylists: Empty library returned")
+		return playlist, err
 	}
 
-	result := make([]mux.Playlist, 0)
 	for _, id := range library.PlaylistIDs {
 		if id == likedPlaylistID {
 			continue
 		}
 
-		yaPlaylist, err := ya.api.GetPlaylist(id, &credentials)
+		yaPlaylist, err := ya.api.GetPlaylist(id, credentials)
 		if err != nil {
 			return nil, err
 		}
-		playlist := mux.Playlist{
+		p := mux.Playlist{
 			Title: yaPlaylist.Title,
 		}
 		for _, track := range yaPlaylist.Tracks {
@@ -99,15 +94,15 @@ func (ya *Yandex) GetPlaylists(userID int64) ([]mux.Playlist, error) {
 				}
 				artists += a.Name
 			}
-			playlist.Songs = append(playlist.Songs, mux.Song{
+			p.Songs = append(p.Songs, mux.Song{
 				Title:   track.Title,
 				Artists: artists,
 			})
 		}
-		result = append(result, playlist)
+		playlist = append(playlist, p)
 	}
 
-	return result, nil
+	return playlist, nil
 }
 
 func (ya *Yandex) AddLiked(userID int64, liked mux.Playlist) error {
@@ -115,7 +110,7 @@ func (ya *Yandex) AddLiked(userID int64, liked mux.Playlist) error {
 	if err != nil {
 		return err
 	}
-	authTokens, err := ya.api.GetAuthTokens(&credentials)
+	authTokens, err := ya.api.GetAuthTokens(credentials)
 	if err != nil {
 		return err
 	}
@@ -126,11 +121,8 @@ func (ya *Yandex) AddLiked(userID int64, liked mux.Playlist) error {
 		if err != nil {
 			return err
 		}
-		if track == nil {
-			continue
-		}
 		time.Sleep(time.Millisecond * requestDelayMs)
-		err = ya.api.LikeTrack(track, &credentials, authTokens)
+		err = ya.api.LikeTrack(track, credentials, authTokens)
 		if err != nil {
 			ya.logger.Log("Yandex.AddLiked:", err)
 		}
@@ -139,7 +131,7 @@ func (ya *Yandex) AddLiked(userID int64, liked mux.Playlist) error {
 	return nil
 }
 
-func (ya *Yandex) addPlaylist(playlist mux.Playlist, credentials *yandex.Credentials, authTokens *yandex.AuthTokens) error {
+func (ya *Yandex) addPlaylist(playlist mux.Playlist, credentials yandex.Credentials, authTokens yandex.AuthTokens) error {
 	playlistSnippet, err := ya.api.AddPlaylist(playlist.Title, credentials, authTokens)
 	if err != nil {
 		return err
@@ -153,7 +145,7 @@ func (ya *Yandex) addPlaylist(playlist mux.Playlist, credentials *yandex.Credent
 			ya.logger.Log(errors.New("Yandex.AddPlaylists:" + err.Error()))
 			continue
 		}
-		if t == nil || len(t.Albums) == 0 {
+		if len(t.Albums) == 0 {
 			ya.logger.Log(errors.New("Yandex.AddPlaylists: Bad track returned:"), t)
 			continue
 		}
@@ -171,13 +163,13 @@ func (ya *Yandex) AddPlaylists(userID int64, playlist []mux.Playlist) error {
 	if err != nil {
 		return err
 	}
-	authTokens, err := ya.api.GetAuthTokens(&credentials)
+	authTokens, err := ya.api.GetAuthTokens(credentials)
 	if err != nil {
 		return err
 	}
 
 	for _, p := range playlist {
-		err = ya.addPlaylist(p, &credentials, authTokens)
+		err = ya.addPlaylist(p, credentials, authTokens)
 		if err != nil {
 			ya.logger.Log("Yandex.AddPlaylists:", err)
 			continue

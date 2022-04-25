@@ -17,8 +17,8 @@ func (ss *spotifyService) GetAuthURL(userID int64) (string, error) {
 	), nil
 }
 
-func (ss *spotifyService) OnGetTokens(userID int64, tokens spotify.Credentials) {
-	ss.tokenStorage.Put(userID, tokens)
+func (ss *spotifyService) OnGetTokens(userID int64, tokens spotify.Credentials) error {
+	return ss.tokenStorage.Put(userID, tokens)
 }
 
 func (ss *spotifyService) Authorized(userID int64) (bool, error) {

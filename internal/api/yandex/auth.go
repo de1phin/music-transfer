@@ -78,32 +78,31 @@ func (api *YandexAPI) checkStatus(userID int64, formTokens loginFormTokens, subm
 	}
 }
 
-func (api *YandexAPI) GetAuthURL(userID int64) (string, error) {
+func (api *YandexAPI) GetAuthURL(userID int64) (url string, err error) {
 	formTokens, err := api.getYandexLoginFormTokens()
 	if err != nil {
 		api.logger.Log("YandexAPI.GetAuthURL.getYandexLoginFormTokens:", err)
-		return "", err
+		return url, err
 	}
 
 	submitResponse, err := api.getYandexSubmitResponse(formTokens)
 	if err != nil {
 		api.logger.Log("YandexAPI.GetAuthURL.getYandexSubmitResponse:", err)
-		return "", err
+		return url, err
 	}
 
-	var url string
 	if api.fixedAuthMagicToken == "" {
 		timer := time.Now()
 		svgQR, err := api.getQRCodeSVG(submitResponse.TrackID)
 		if err != nil {
 			api.logger.Log("YandexAPI.GetAuthURL.getQRCode:", err)
-			return "", err
+			return url, err
 		}
 
 		url, err = decodeQR(svgQR)
 		if err != nil {
 			api.logger.Log("YandexAPI.GetAuthURL.decodeQR:", err)
-			return "", err
+			return url, err
 		}
 		api.logger.Log("YandexAPI: QR fetched and decoded in", time.Since(timer))
 	} else {
@@ -116,53 +115,49 @@ func (api *YandexAPI) GetAuthURL(userID int64) (string, error) {
 	return url, err
 }
 
-func (api *YandexAPI) getYandexLoginFormTokens() (loginFormTokens, error) {
-	result := loginFormTokens{}
-
+func (api *YandexAPI) getYandexLoginFormTokens() (tokens loginFormTokens, err error) {
 	req, err := http.NewRequest("GET", "https://passport.yandex.ru/auth", nil)
 	if err != nil {
-		return result, err
+		return tokens, err
 	}
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return result, err
+		return tokens, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return result, errors.New("YandexAPI.getYandexLoginFormTokens: Status - " + resp.Status)
+		return tokens, errors.New("YandexAPI.getYandexLoginFormTokens: Status - " + resp.Status)
 	}
 	html, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return result, err
+		return tokens, err
 	}
 
-	result.cookies = resp.Cookies()
+	tokens.cookies = resp.Cookies()
 
 	csrfTokenBegin := bytes.Index(html, []byte("csrf_token"))
 	if csrfTokenBegin == -1 {
-		return result, errors.New("YandexAPI.getYandexLoginFormTokens: No csrf token provided")
+		return tokens, errors.New("YandexAPI.getYandexLoginFormTokens: No csrf token provided")
 	}
 	csrfTokenBegin = csrfTokenBegin + bytes.Index(html[csrfTokenBegin:], []byte("value=\"")) + 7
 	csrfTokenEnd := csrfTokenBegin + bytes.Index(html[csrfTokenBegin:], []byte("\""))
-	result.csrf = string(html[csrfTokenBegin:csrfTokenEnd])
+	tokens.csrf = string(html[csrfTokenBegin:csrfTokenEnd])
 
 	processUUIDBegin := bytes.Index(html, []byte("process_uuid=")) + 13
 	if processUUIDBegin == -1 {
-		return result, errors.New("YandexAPI.getYandexLoginFormTokens: No processUUID provided")
+		return tokens, errors.New("YandexAPI.getYandexLoginFormTokens: No processUUID provided")
 	}
 	processUUIDEnd := processUUIDBegin + bytes.Index(html[processUUIDBegin:], []byte("\""))
-	result.processUUID = string(html[processUUIDBegin:processUUIDEnd])
+	tokens.processUUID = string(html[processUUIDBegin:processUUIDEnd])
 
-	return result, nil
+	return tokens, nil
 }
 
-func (api *YandexAPI) getYandexSubmitResponse(formTokens loginFormTokens) (submitResponse, error) {
-	result := submitResponse{}
-
+func (api *YandexAPI) getYandexSubmitResponse(formTokens loginFormTokens) (submit submitResponse, err error) {
 	data := "csrf_token=" + url.QueryEscape(formTokens.csrf) + "&process_uuid=" +
 		url.QueryEscape(formTokens.processUUID) + "&with_code=1"
 	req, err := http.NewRequest("POST", "https://passport.yandex.ru/registration-validations/auth/password/submit", strings.NewReader(data))
 	if err != nil {
-		return result, err
+		return submit, err
 	}
 	for _, c := range formTokens.cookies {
 		req.AddCookie(c)
@@ -170,39 +165,46 @@ func (api *YandexAPI) getYandexSubmitResponse(formTokens loginFormTokens) (submi
 
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return result, err
+		return submit, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return result, errors.New("YandexAPI.getYandexSubmitResponse: Status:" + resp.Status)
+		return submit, errors.New("YandexAPI.getYandexSubmitResponse: Status:" + resp.Status)
 	}
 	if resp.Body == nil {
-		return result, errors.New("YandexAPI.getYandexSubmitResponse: Empty body returned")
+		return submit, errors.New("YandexAPI.getYandexSubmitResponse: Empty body returned")
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return result, err
+		return submit, err
 	}
-	json.Unmarshal(body, &result)
-	return result, nil
+
+	err = json.Unmarshal(body, &submit)
+	if err != nil {
+		return submit, err
+	}
+
+	return submit, nil
 }
 
-func (api *YandexAPI) getQRCodeSVG(trackID string) ([]byte, error) {
+func (api *YandexAPI) getQRCodeSVG(trackID string) (svg []byte, err error) {
 	url := "https://passport.yandex.ru/auth/magic/code/?track_id=" + trackID
 	data := "track_id=" + trackID
 	req, err := http.NewRequest("GET", url, strings.NewReader(data))
 	if err != nil {
-		return nil, err
+		return svg, err
 	}
 
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return nil, err
+		return svg, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, errors.New("YandexAPI.getQRCode: Status: " + resp.Status)
+		return svg, errors.New("YandexAPI.getQRCode: Status: " + resp.Status)
 	}
 	if resp.Body == nil {
-		return nil, errors.New("YandexAPI.getQRCode: Empty body returned")
+		return svg, errors.New("YandexAPI.getQRCode: Empty body returned")
 	}
-	return ioutil.ReadAll(resp.Body)
+
+	svg, err = ioutil.ReadAll(resp.Body)
+	return svg, err
 }

@@ -59,7 +59,7 @@ type searchRequest struct {
 	Query   string        `json:"query"`
 }
 
-func (api *YoutubeAPI) SearchVideo(title string, artists string) (string, error) {
+func (api *YoutubeAPI) SearchVideo(title string, artists string) (videoID string, err error) {
 	url := "https://www.youtube.com/youtubei/v1/search?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&prettyPrint=false"
 	query := searchRequest{
 		Context: searchContext{
@@ -72,37 +72,38 @@ func (api *YoutubeAPI) SearchVideo(title string, artists string) (string, error)
 	}
 	data, err := json.Marshal(query)
 	if err != nil {
-		return "", err
+		return videoID, err
 	}
 	req, err := http.NewRequest("POST", url, bytes.NewReader(data))
 	if err != nil {
-		return "", err
+		return videoID, err
 	}
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("content-type", "application/json")
 
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return "", err
+		return videoID, err
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return videoID, err
 	}
 
 	search := searchResponse{}
 	err = json.Unmarshal(body, &search)
 	if err != nil {
-		return "", err
+		return videoID, err
 	}
 
 	if len(search.Contents.TwoColumnSearchResultsRenderer.PrimaryContents.SectionListRenderer.Contents) == 0 {
-		return "", errors.New("YoutubeAPI.SearchVideo: Contents empty")
+		return videoID, errors.New("YoutubeAPI.SearchVideo: Contents empty")
 	}
 	if len(search.Contents.TwoColumnSearchResultsRenderer.PrimaryContents.SectionListRenderer.Contents[0].ItemSectionRenderer.Contents) == 0 {
-		return "", errors.New("YoutubeAPI.SearchVideo: Contents empty")
+		return videoID, errors.New("YoutubeAPI.SearchVideo: Contents empty")
 	}
 
-	return search.Contents.TwoColumnSearchResultsRenderer.PrimaryContents.SectionListRenderer.Contents[0].ItemSectionRenderer.Contents[0].VideoRenderer.VideoID, nil
+	videoID = search.Contents.TwoColumnSearchResultsRenderer.PrimaryContents.SectionListRenderer.Contents[0].ItemSectionRenderer.Contents[0].VideoRenderer.VideoID
+	return videoID, nil
 
 }

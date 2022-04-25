@@ -44,7 +44,7 @@ func main() {
 	server := callback.NewCallbackServer(config.GetServerHostname())
 
 	spotifyStorage := postgres.NewTable[int64, spotifyAPI.Credentials](psql, "Spotify", "id")
-	spotifyAPI := spotifyAPI.NewSpotifyAPI(spotifyConfig.Client, "http://"+config.GetServerHostname())
+	spotifyAPI := spotifyAPI.NewSpotifyAPI(spotifyConfig.Client, "http://"+config.GetServerHostname(), fileLogger)
 	spotify := spotify.NewSpotifyService(spotifyConfig, "http://"+config.GetServerHostname(), spotifyAPI, spotifyStorage)
 	spotifyAPI.BindHandler(server.ServeMux, spotify.OnGetTokens)
 
@@ -56,7 +56,7 @@ func main() {
 		Scopes:       config.GetYouTubeScope(),
 		RedirectURI:  "http://" + config.GetServerHostname() + "/youtube",
 	}
-	youtubeAPI := youtubeAPI.NewYoutubeAPI(&youtubeConfig)
+	youtubeAPI := youtubeAPI.NewYoutubeAPI(&youtubeConfig, fileLogger)
 	youtube := youtube.NewYouTubeService(youtubeAPI, youtubeStorage, &youtubeConfig, fileLogger)
 	youtubeAPI.BindHandler(server.ServeMux, youtube.OnGetTokens)
 

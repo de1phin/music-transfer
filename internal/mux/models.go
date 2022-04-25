@@ -22,15 +22,9 @@ const (
 	ChoosingDst
 )
 
-type Either struct {
-	Text   string `xml:"text"`
-	URL    URL    `xml:"url"`
-	Button string `xml:"button"`
-}
-
 type URL struct {
-	Link string `xml:"link"`
-	Text string `xml:"text"`
+	Link string
+	Text string
 }
 
 type Song struct {

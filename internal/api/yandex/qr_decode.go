@@ -26,17 +26,18 @@ func decodeSVG(svg []byte) (image.Image, error) {
 	return rgba, nil
 }
 
-func decodeQR(svg []byte) (string, error) {
+func decodeQR(svg []byte) (url string, err error) {
 	img, err := decodeSVG(svg)
 	if err != nil {
-		return "", err
+		return url, err
 	}
 	qrCodes, err := goqr.Recognize(img)
 	if err != nil {
-		return "", err
+		return url, err
 	}
 	if len(qrCodes) != 1 {
-		return "", errors.New("YandexAPI.decodeQR: Invalid QRCode")
+		return url, errors.New("YandexAPI.decodeQR: Invalid QRCode")
 	}
-	return string(qrCodes[0].Payload), nil
+	url = string(qrCodes[0].Payload)
+	return url, nil
 }

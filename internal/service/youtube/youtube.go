@@ -29,16 +29,15 @@ func (*youtubeService) Name() string {
 	return "youtube"
 }
 
-func (yt *youtubeService) GetLiked(userID int64) (mux.Playlist, error) {
+func (yt *youtubeService) GetLiked(userID int64) (liked mux.Playlist, err error) {
 	tokens, err := yt.tokenStorage.Get(userID)
 	if err != nil {
-		return mux.Playlist{}, err
+		return liked, err
 	}
 	videos, err := yt.api.GetLiked(tokens)
 	if err != nil {
-		return mux.Playlist{}, err
+		return liked, err
 	}
-	liked := mux.Playlist{}
 	for _, video := range videos {
 		liked.Songs = append(liked.Songs, mux.Song{
 			Title:   video.Snippet.Title,
@@ -68,16 +67,17 @@ func (yt *youtubeService) AddLiked(userID int64, liked mux.Playlist) error {
 	return nil
 }
 
-func (yt *youtubeService) GetPlaylists(userID int64) ([]mux.Playlist, error) {
+func (yt *youtubeService) GetPlaylists(userID int64) (playlists []mux.Playlist, err error) {
 	tokens, err := yt.tokenStorage.Get(userID)
 	if err != nil {
-		return nil, err
+		return playlists, err
 	}
-	playlists := []mux.Playlist{}
+
 	ytplaylists, err := yt.api.GetUserPlaylists(tokens)
 	if err != nil {
-		return nil, err
+		return playlists, err
 	}
+
 	for _, playlist := range ytplaylists {
 		videos, err := yt.api.GetPlaylistContent(tokens, playlist.ID)
 		if err != nil {

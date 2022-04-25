@@ -34,12 +34,11 @@ func (spotify *spotifyService) Name() string {
 	return "spotify"
 }
 
-func (spotify *spotifyService) GetLiked(userID int64) (mux.Playlist, error) {
+func (spotify *spotifyService) GetLiked(userID int64) (liked mux.Playlist, err error) {
 	tokens, err := spotify.tokenStorage.Get(userID)
 	if err != nil {
-		return mux.Playlist{}, err
+		return liked, err
 	}
-	liked := mux.Playlist{}
 	playlist, err := spotify.api.GetLiked(tokens)
 	if err != nil {
 		return liked, err
@@ -79,16 +78,15 @@ func (spotify *spotifyService) AddLiked(userID int64, liked mux.Playlist) error 
 	return spotify.api.LikeTracks(tokens, tracks)
 }
 
-func (spotify *spotifyService) GetPlaylists(userID int64) ([]mux.Playlist, error) {
+func (spotify *spotifyService) GetPlaylists(userID int64) (playlists []mux.Playlist, err error) {
 	tokens, err := spotify.tokenStorage.Get(userID)
 	if err != nil {
-		return nil, err
+		return playlists, err
 	}
 	spotifyPlaylists, err := spotify.api.GetUserPlaylists(tokens)
 	if err != nil {
-		return nil, err
+		return playlists, err
 	}
-	playlists := []mux.Playlist{}
 	for _, playlist := range spotifyPlaylists {
 		tracks, err := spotify.api.GetPlaylistTracks(tokens, playlist.ID)
 		if err != nil {
