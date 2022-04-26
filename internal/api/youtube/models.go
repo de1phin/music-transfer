@@ -4,14 +4,6 @@ type Credentials struct {
 	AccessToken string `json:"access_token" db:"access_token"`
 }
 
-type YoutubeConfig struct {
-	APIKey       string
-	ClientID     string
-	ClientSecret string
-	Scopes       string
-	RedirectURI  string
-}
-
 type pageInfo struct {
 	TotalResults int64 `json:"totalResults"`
 }

@@ -91,7 +91,7 @@ func (api *YandexAPI) GetAuthURL(userID int64) (url string, err error) {
 		return url, err
 	}
 
-	if api.fixedAuthMagicToken == "" {
+	if !api.UseFixedURL {
 		timer := time.Now()
 		svgQR, err := api.getQRCodeSVG(submitResponse.TrackID)
 		if err != nil {
@@ -107,7 +107,7 @@ func (api *YandexAPI) GetAuthURL(userID int64) (url string, err error) {
 		api.logger.Log("YandexAPI: QR fetched and decoded in", time.Since(timer))
 	} else {
 		url = "https://passport.yandex.ru/am/push/qrsecure?track_id=" + submitResponse.TrackID +
-			"&magic=" + api.fixedAuthMagicToken
+			"&magic=" + api.Magic
 	}
 
 	go api.checkStatus(userID, formTokens, submitResponse)

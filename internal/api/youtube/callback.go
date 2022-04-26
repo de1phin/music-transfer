@@ -39,7 +39,7 @@ func (api *YoutubeAPI) callbackHandler(onGetTokens OnGetTokens) func(w http.Resp
 		}
 		code := m["code"][0]
 
-		body := bytes.NewReader([]byte(fmt.Sprintf("code=%s&client_id=%s&client_secret=%s&redirect_uri=%s&grant_type=authorization_code", code, api.config.ClientID, api.config.ClientSecret, api.config.RedirectURI)))
+		body := bytes.NewReader([]byte(fmt.Sprintf("code=%s&client_id=%s&client_secret=%s&redirect_uri=%s&grant_type=authorization_code", code, api.ClientID, api.ClientSecret, api.RedirectURI)))
 
 		request, err := http.NewRequest("POST", "https://oauth2.googleapis.com/token", body)
 		if err != nil {

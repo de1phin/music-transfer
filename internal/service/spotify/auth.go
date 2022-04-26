@@ -9,7 +9,7 @@ import (
 func (ss *spotifyService) GetAuthURL(userID int64) (string, error) {
 	return fmt.Sprintf(
 		"https://accounts.spotify.com/authorize?client_id=%s&"+
-			"response_type=code&redirect_uri=%s/spotify&scope=%s&state=%d",
+			"response_type=code&redirect_uri=%s&scope=%s&state=%d",
 		ss.client.ID,
 		ss.redirectURI,
 		ss.scopes,

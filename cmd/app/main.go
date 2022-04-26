@@ -13,7 +13,7 @@ import (
 	"github.com/de1phin/music-transfer/internal/interactor/interactors/telegram"
 	logger "github.com/de1phin/music-transfer/internal/log/file_logger"
 	"github.com/de1phin/music-transfer/internal/mux"
-	"github.com/de1phin/music-transfer/internal/server/callback"
+	"github.com/de1phin/music-transfer/internal/server"
 	"github.com/de1phin/music-transfer/internal/service/mock"
 	"github.com/de1phin/music-transfer/internal/service/spotify"
 	"github.com/de1phin/music-transfer/internal/service/yandex"
@@ -24,44 +24,34 @@ import (
 
 func main() {
 
-	config := config.NewConfig("./config", "config", "yaml")
-	fileLogger, err := logger.NewFileLogger("./log/a.log")
-	if err != nil {
-		panic("FileLogger init error: " + err.Error())
-	}
-	psql, err := postgres.NewPostgresDatabase(config.GetPosgresDataSourceName())
+	config, err := config.ReadConfig("./config", "config", "yaml")
 	if err != nil {
 		panic(err)
 	}
 
-	spotifyConfig := spotify.SpotifyConfig{
-		Scopes: config.GetSpotifyScope(),
-		Client: spotifyAPI.Client{
-			ID:     config.GetSpotifyClientID(),
-			Secret: config.GetSpotifyClientSecret(),
-		},
+	fileLogger, err := logger.NewFileLogger("./log/a.log")
+	if err != nil {
+		panic("FileLogger init error: " + err.Error())
 	}
-	server := callback.NewCallbackServer(config.GetServerHostname())
+	psql, err := postgres.NewPostgresDatabase(config.Postgres)
+	if err != nil {
+		panic(err)
+	}
+
+	server := server.NewServer(config.Server)
 
 	spotifyStorage := postgres.NewTable[int64, spotifyAPI.Credentials](psql, "Spotify", "id")
-	spotifyAPI := spotifyAPI.NewSpotifyAPI(spotifyConfig.Client, "http://"+config.GetServerHostname(), fileLogger)
-	spotify := spotify.NewSpotifyService(spotifyConfig, "http://"+config.GetServerHostname(), spotifyAPI, spotifyStorage)
+	spotifyAPI := spotifyAPI.NewSpotifyAPI(config.Spotify, fileLogger)
+	spotify := spotify.NewSpotifyService(config.Spotify, spotifyAPI, spotifyStorage)
 	spotifyAPI.BindHandler(server.ServeMux, spotify.OnGetTokens)
 
 	youtubeStorage := postgres.NewTable[int64, youtubeAPI.Credentials](psql, "Youtube", "id")
-	youtubeConfig := youtubeAPI.YoutubeConfig{
-		APIKey:       config.GetYouTubeApiKEY(),
-		ClientID:     config.GetYouTubeClientID(),
-		ClientSecret: config.GetYouTubeClientSecret(),
-		Scopes:       config.GetYouTubeScope(),
-		RedirectURI:  "http://" + config.GetServerHostname() + "/youtube",
-	}
-	youtubeAPI := youtubeAPI.NewYoutubeAPI(&youtubeConfig, fileLogger)
-	youtube := youtube.NewYouTubeService(youtubeAPI, youtubeStorage, &youtubeConfig, fileLogger)
+	youtubeAPI := youtubeAPI.NewYoutubeAPI(config.Youtube, fileLogger)
+	youtube := youtube.NewYouTubeService(youtubeAPI, youtubeStorage, fileLogger)
 	youtubeAPI.BindHandler(server.ServeMux, youtube.OnGetTokens)
 
 	yandexStorage := postgres.NewTable[int64, yandexAPI.Credentials](psql, "Yandex", "id")
-	yandexAPI := yandexAPI.NewYandexAPI(fileLogger, config.GetYandexMagicToken())
+	yandexAPI := yandexAPI.NewYandexAPI(fileLogger, config.Yandex)
 	yandex := yandex.NewYandexService(yandexAPI, yandexStorage, fileLogger)
 	yandexAPI.BindOnGetCredentials(yandex.OnGetCredentials)
 
@@ -74,7 +64,7 @@ func main() {
 
 	userStateStorage := cache.NewCacheStorage[int64, mux.UserState]()
 
-	telegram, err := telegram.NewTelegramBot(config.GetTelegramToken())
+	telegram, err := telegram.NewTelegramBot(config.Telegram)
 	if err != nil {
 		panic("Telegram init error: " + err.Error())
 	}

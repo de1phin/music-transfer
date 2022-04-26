@@ -11,15 +11,13 @@ import (
 
 type youtubeService struct {
 	tokenStorage storage.Storage[int64, youtube.Credentials]
-	config       *youtube.YoutubeConfig
 	api          *youtube.YoutubeAPI
 	logger       log.Logger
 }
 
-func NewYouTubeService(api *youtube.YoutubeAPI, tokenStorage storage.Storage[int64, youtube.Credentials], config *youtube.YoutubeConfig, logger log.Logger) *youtubeService {
+func NewYouTubeService(api *youtube.YoutubeAPI, tokenStorage storage.Storage[int64, youtube.Credentials], logger log.Logger) *youtubeService {
 	return &youtubeService{
 		tokenStorage: tokenStorage,
-		config:       config,
 		api:          api,
 		logger:       logger,
 	}

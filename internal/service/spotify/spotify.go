@@ -7,11 +7,6 @@ import (
 	"github.com/de1phin/music-transfer/internal/storage"
 )
 
-type SpotifyConfig struct {
-	Client spotify.Client
-	Scopes string
-}
-
 type spotifyService struct {
 	scopes       string
 	client       spotify.Client
@@ -20,12 +15,15 @@ type spotifyService struct {
 	tokenStorage storage.Storage[int64, spotify.Credentials]
 }
 
-func NewSpotifyService(config SpotifyConfig, redirectURI string, spotifyAPI *spotify.SpotifyAPI, tokenStorage storage.Storage[int64, spotify.Credentials]) *spotifyService {
+func NewSpotifyService(config spotify.Config, spotifyAPI *spotify.SpotifyAPI, tokenStorage storage.Storage[int64, spotify.Credentials]) *spotifyService {
 	return &spotifyService{
-		scopes:       config.Scopes,
-		client:       config.Client,
+		scopes: config.Scopes,
+		client: spotify.Client{
+			ID:     config.ClientID,
+			Secret: config.ClientSecret,
+		},
 		api:          spotifyAPI,
-		redirectURI:  redirectURI,
+		redirectURI:  config.RedirectURI,
 		tokenStorage: tokenStorage,
 	}
 }

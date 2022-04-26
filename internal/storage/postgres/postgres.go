@@ -9,9 +9,9 @@ type Postgres struct {
 	*sqlx.DB
 }
 
-func NewPostgresDatabase(dataSourceName string) (*Postgres, error) {
-	psql := new(Postgres)
-	var err error
+func NewPostgresDatabase(config Config) (psql *Postgres, err error) {
+	psql = new(Postgres)
+	dataSourceName := "user=" + config.User + " password=" + config.Password + " dbname=" + config.DBName + " sslmode=" + config.SSLMode
 	psql.DB, err = sqlx.Open("postgres", dataSourceName)
 	return psql, err
 }

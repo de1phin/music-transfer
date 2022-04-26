@@ -21,12 +21,15 @@ type SpotifyAPI struct {
 	redirectURI string
 }
 
-func NewSpotifyAPI(client Client, hostname string, logger log.Logger) *SpotifyAPI {
+func NewSpotifyAPI(config Config, logger log.Logger) *SpotifyAPI {
 	return &SpotifyAPI{
-		httpClient:  &http.Client{},
-		client:      client,
+		httpClient: &http.Client{},
+		client: Client{
+			ID:     config.ClientID,
+			Secret: config.ClientSecret,
+		},
 		logger:      logger,
-		redirectURI: hostname + "/spotify",
+		redirectURI: config.RedirectURI,
 	}
 }
 

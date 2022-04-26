@@ -24,8 +24,8 @@ type Button struct {
 	Data string
 }
 
-func NewTelegramBot(token string) (*TelegramBot, error) {
-	bot, err := tgbotapi.NewBotAPI(token)
+func NewTelegramBot(config Config) (*TelegramBot, error) {
+	bot, err := tgbotapi.NewBotAPI(config.Token)
 	if err != nil {
 		return nil, err
 	}

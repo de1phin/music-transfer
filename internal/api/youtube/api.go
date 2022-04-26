@@ -8,23 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-
-	"github.com/de1phin/music-transfer/internal/log"
 )
-
-type YoutubeAPI struct {
-	httpClient *http.Client
-	config     *YoutubeConfig
-	logger     log.Logger
-}
-
-func NewYoutubeAPI(config *YoutubeConfig, logger log.Logger) *YoutubeAPI {
-	return &YoutubeAPI{
-		config:     config,
-		logger:     logger,
-		httpClient: &http.Client{},
-	}
-}
 
 func (api *YoutubeAPI) GetLiked(tokens Credentials) (videos []Video, err error) {
 	limit := 50
@@ -69,7 +53,7 @@ func (api *YoutubeAPI) GetLiked(tokens Credentials) (videos []Video, err error) 
 }
 
 func (api *YoutubeAPI) GetUserPlaylists(tokens Credentials) (playlists []Playlist, err error) {
-	url := fmt.Sprintf("https://youtube.googleapis.com/youtube/v3/playlists?part=id,snippet&mine=true&key=%s", api.config.APIKey)
+	url := fmt.Sprintf("https://youtube.googleapis.com/youtube/v3/playlists?part=id,snippet&mine=true&key=%s", api.APIKey)
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return playlists, err
@@ -215,7 +199,7 @@ func (api *YoutubeAPI) AddToPlaylist(tokens Credentials, playlistID string, vide
 }
 
 func (api *YoutubeAPI) Authorized(tokens Credentials) (bool, error) {
-	url := "https://www.googleapis.com/youtube/v3/channels?part=id&mine=true&key=" + api.config.APIKey
+	url := "https://www.googleapis.com/youtube/v3/channels?part=id&mine=true&key=" + api.APIKey
 	request, _ := http.NewRequest("GET", url, nil)
 	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
 
