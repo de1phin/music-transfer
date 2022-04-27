@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"time"
 
 	spotifyAPI "github.com/de1phin/music-transfer/internal/api/spotify"
 	yandexAPI "github.com/de1phin/music-transfer/internal/api/yandex"
@@ -71,9 +72,9 @@ func main() {
 	telegramAdapter := telegramAdapter.NewTelegramAdapter(telegram, userStateStorage)
 
 	console := console.NewConsoleInteractor()
-	consoleAdapter := consoleAdapter.NewConsoleAdapter(console, 17)
+	consoleAdapter := consoleAdapter.NewConsoleAdapter(console, time.Now().Unix())
 
-	transferStorage := cache.NewCacheStorage[int64, mux.Transfer]()
+	transferStorage := cache.NewCacheStorage[int64, mux.TransferState]()
 	idStorage := cache.NewCacheStorage[string, int64]()
 
 	interactors := []mux.Interactor{
@@ -82,6 +83,9 @@ func main() {
 	}
 
 	mux := mux.NewMux(services, interactors, transferStorage, idStorage, fileLogger)
+	spotify.BindOnAuthorized(mux.OnAuthorized)
+	youtube.BindOnAuthorized(mux.OnAuthorized)
+	yandex.BindOnAuthorized(mux.OnAuthorized)
 
 	go server.Run()
 

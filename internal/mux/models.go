@@ -12,14 +12,23 @@ type MessageContent struct {
 	Buttons []string
 }
 
-type Transfer Service
+type TransferState struct {
+	sourceServiceName       string
+	sourceServiceAuthorized bool
+	destinationServiceName  string
+	activeInteractorName    string
+	interactorUserID        int64
+}
 
 type UserState int
 
 const (
 	Idle UserState = iota
-	ChoosingSrc
-	ChoosingDst
+	ChooseSource
+	AuthorizeSource
+	ChooseDestination
+	AuthorizeDestination
+	Transfer
 )
 
 type URL struct {

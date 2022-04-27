@@ -4,7 +4,12 @@ import (
 	"errors"
 
 	"github.com/de1phin/music-transfer/internal/api/yandex"
+	"github.com/de1phin/music-transfer/internal/mux"
 )
+
+func (ya *Yandex) BindOnAuthorized(OnAuthorized mux.OnAuthorized) {
+	ya.OnAuthorized = OnAuthorized
+}
 
 func (ya *Yandex) OnGetCredentials(userID int64, credentials yandex.Credentials) {
 	user, err := ya.api.GetMe(credentials)
@@ -17,6 +22,8 @@ func (ya *Yandex) OnGetCredentials(userID int64, credentials yandex.Credentials)
 	if err != nil {
 		ya.logger.Log(errors.New("Yandex.OnGetCredentials: " + err.Error()))
 	}
+
+	ya.OnAuthorized(ya, userID)
 }
 
 func (ya *Yandex) GetAuthURL(userID int64) (string, error) {

@@ -8,8 +8,6 @@ import (
 	"github.com/de1phin/music-transfer/internal/storage"
 )
 
-type Handler func(Interactor, Message, int64) bool
-
 type Interactor interface {
 	Name() string
 	SendMessage(Message) error
@@ -26,17 +24,19 @@ type Service interface {
 	AddPlaylists(int64, []Playlist) error
 }
 
+type OnAuthorized func(Service, int64)
+
 type Mux struct {
 	services        []Service
-	transferStorage storage.Storage[int64, Transfer]
+	transferStorage storage.Storage[int64, TransferState]
 	idStorage       storage.Storage[string, int64]
 	interactors     []Interactor
-	handlers        []Handler
+	handlers        []handlerWrapper
 	IDGenerator     IDGenerator
 	logger          log.Logger
 }
 
-func NewMux(services []Service, interactors []Interactor, transferStorage storage.Storage[int64, Transfer], idStorage storage.Storage[string, int64], logger log.Logger) *Mux {
+func NewMux(services []Service, interactors []Interactor, transferStorage storage.Storage[int64, TransferState], idStorage storage.Storage[string, int64], logger log.Logger) *Mux {
 	mux := Mux{
 		services:        services,
 		interactors:     interactors,
@@ -45,10 +45,13 @@ func NewMux(services []Service, interactors []Interactor, transferStorage storag
 		IDGenerator:     IDGenerator{nextID: 0},
 		logger:          logger,
 	}
-	mux.handlers = []Handler{
-		NewStateHandler(Idle, mux.HandleIdle),
-		NewStateHandler(ChoosingSrc, mux.HandleChoosingSrc),
-		NewStateHandler(ChoosingDst, mux.HandleChoosingDst),
+	mux.handlers = []handlerWrapper{
+		newHandler(Idle, mux.handleIdle),
+		newHandler(ChooseSource, mux.handleChooseSource),
+		newHandler(AuthorizeSource, mux.handleAuthorizeSource),
+		newHandler(ChooseDestination, mux.handleChooseDestination),
+		newHandler(AuthorizeDestination, mux.handleAuthorizeDestination),
+		newHandler(Transfer, mux.handleTransfer),
 	}
 	return &mux
 }
@@ -96,4 +99,60 @@ func (mux *Mux) listenInteractor(interactor Interactor) {
 		}
 		mux.logger.Log("Mux.handleInteractor: Message handled in " + time.Since(start).String())
 	}
+}
+
+func (mux *Mux) transfer(from Service, to Service, userID int64) error {
+	liked, err := from.GetLiked(userID)
+	if err != nil {
+		return fmt.Errorf("Unable to get liked: %w", err)
+	}
+	err = to.AddLiked(userID, liked)
+	if err != nil {
+		return fmt.Errorf("Unable to add liked: %w", err)
+	}
+
+	playlists, err := from.GetPlaylists(userID)
+	if err != nil {
+		return fmt.Errorf("Unable to get playlists: %w", err)
+	}
+	err = to.AddPlaylists(userID, playlists)
+	if err != nil {
+		return fmt.Errorf("Unable to add playlists: %w", err)
+	}
+
+	return nil
+}
+
+func (mux *Mux) OnAuthorized(from Service, internalID int64) {
+	fmt.Println("Notified from", from.Name(), "about", internalID)
+	transferState, err := mux.transferStorage.Get(internalID)
+	if err != nil {
+		mux.logger.Log("mux: OnAuthorized: Unable to get transfer state: %w", err)
+		return
+	}
+
+	interactor := mux.GetInteractorByName(transferState.activeInteractorName)
+	if interactor == nil {
+		mux.logger.Log("mux: OnAuthorized: Active Interactor is nil")
+		return
+	}
+	fmt.Println("Interactor:", interactor.Name())
+
+	if transferState.sourceServiceAuthorized {
+		fmt.Println("HandleAuthorizeDestination")
+		mux.handleAuthorizeDestination(interactor, Message{UserID: transferState.interactorUserID}, internalID)
+	} else {
+		transferState.sourceServiceAuthorized = true
+		err = mux.transferStorage.Put(internalID, transferState)
+		if err != nil {
+			mux.handleError(fmt.Errorf("OnAuthorized: Unable to put transfer state: %w", err),
+				interactor, Message{
+					UserID: transferState.interactorUserID,
+				})
+			return
+		}
+		fmt.Println("HandleAuthorizeSource")
+		mux.handleAuthorizeSource(interactor, Message{UserID: transferState.interactorUserID}, internalID)
+	}
+	fmt.Println("Done")
 }

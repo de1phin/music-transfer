@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/de1phin/music-transfer/internal/api/spotify"
+	"github.com/de1phin/music-transfer/internal/mux"
 )
 
 func (ss *spotifyService) GetAuthURL(userID int64) (string, error) {
@@ -17,8 +18,19 @@ func (ss *spotifyService) GetAuthURL(userID int64) (string, error) {
 	), nil
 }
 
+func (spotify *spotifyService) BindOnAuthorized(OnAuthorized mux.OnAuthorized) {
+	spotify.OnAuthorizedNotify = OnAuthorized
+}
+
 func (ss *spotifyService) OnGetTokens(userID int64, tokens spotify.Credentials) error {
-	return ss.tokenStorage.Put(userID, tokens)
+	err := ss.tokenStorage.Put(userID, tokens)
+	if err != nil {
+		return err
+	}
+	if ss.OnAuthorizedNotify != nil {
+		ss.OnAuthorizedNotify(ss, userID)
+	}
+	return nil
 }
 
 func (ss *spotifyService) Authorized(userID int64) (bool, error) {

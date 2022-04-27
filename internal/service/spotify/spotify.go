@@ -8,11 +8,12 @@ import (
 )
 
 type spotifyService struct {
-	scopes       string
-	client       spotify.Client
-	api          *spotify.SpotifyAPI
-	redirectURI  string
-	tokenStorage storage.Storage[int64, spotify.Credentials]
+	scopes             string
+	client             spotify.Client
+	api                *spotify.SpotifyAPI
+	redirectURI        string
+	tokenStorage       storage.Storage[int64, spotify.Credentials]
+	OnAuthorizedNotify mux.OnAuthorized
 }
 
 func NewSpotifyService(config spotify.Config, spotifyAPI *spotify.SpotifyAPI, tokenStorage storage.Storage[int64, spotify.Credentials]) *spotifyService {

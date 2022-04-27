@@ -16,9 +16,10 @@ const (
 )
 
 type Yandex struct {
-	api     *yandex.YandexAPI
-	storage storage.Storage[int64, yandex.Credentials]
-	logger  log.Logger
+	api          *yandex.YandexAPI
+	storage      storage.Storage[int64, yandex.Credentials]
+	logger       log.Logger
+	OnAuthorized mux.OnAuthorized
 }
 
 func NewYandexService(api *yandex.YandexAPI, storage storage.Storage[int64, yandex.Credentials], logger log.Logger) *Yandex {

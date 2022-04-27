@@ -2,7 +2,6 @@ package mock
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/de1phin/music-transfer/internal/mux"
 )
@@ -18,7 +17,7 @@ func (*Mock) Name() string {
 }
 
 func (*Mock) GetAuthURL(userID int64) (string, error) {
-	return fmt.Sprintf("mock/user_id=%d", userID), nil
+	return "", fmt.Errorf("Mock: unreachable")
 }
 
 func (*Mock) GetLiked(int64) (mux.Playlist, error) {
@@ -31,7 +30,7 @@ func (*Mock) GetLiked(int64) (mux.Playlist, error) {
 }
 
 func (*Mock) AddLiked(userID int64, liked mux.Playlist) error {
-	log.Println("[mock] Asked to like:", liked)
+	fmt.Println("[mock] Asked to like:", liked)
 	return nil
 }
 
@@ -50,7 +49,7 @@ func (*Mock) GetPlaylists(int64) ([]mux.Playlist, error) {
 }
 
 func (*Mock) AddPlaylists(userID int64, playlists []mux.Playlist) error {
-	log.Println("[mock] Asked to add:", playlists)
+	fmt.Println("[mock] Asked to add:", playlists)
 	return nil
 }
 

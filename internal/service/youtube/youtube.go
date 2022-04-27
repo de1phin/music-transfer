@@ -10,9 +10,10 @@ import (
 )
 
 type youtubeService struct {
-	tokenStorage storage.Storage[int64, youtube.Credentials]
-	api          *youtube.YoutubeAPI
-	logger       log.Logger
+	tokenStorage       storage.Storage[int64, youtube.Credentials]
+	api                *youtube.YoutubeAPI
+	logger             log.Logger
+	OnAuthorizedNotify mux.OnAuthorized
 }
 
 func NewYouTubeService(api *youtube.YoutubeAPI, tokenStorage storage.Storage[int64, youtube.Credentials], logger log.Logger) *youtubeService {
