@@ -23,7 +23,7 @@ func (spotify *spotifyService) BindOnAuthorized(OnAuthorized mux.OnAuthorized) {
 }
 
 func (ss *spotifyService) OnGetTokens(userID int64, tokens spotify.Credentials) error {
-	err := ss.tokenStorage.Put(userID, tokens)
+	err := ss.tokenStorage.Set(userID, tokens)
 	if err != nil {
 		return err
 	}

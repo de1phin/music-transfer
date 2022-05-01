@@ -18,7 +18,7 @@ func (ya *Yandex) OnGetCredentials(userID int64, credentials yandex.Credentials)
 		return
 	}
 	credentials.Login = user.Login
-	err = ya.storage.Put(userID, credentials)
+	err = ya.storage.Set(userID, credentials)
 	if err != nil {
 		ya.logger.Log(errors.New("Yandex.OnGetCredentials: " + err.Error()))
 	}

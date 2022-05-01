@@ -85,7 +85,7 @@ func (mux *Mux) listenInteractor(interactor Interactor) {
 			}
 		} else {
 			internalID = mux.IDGenerator.NextID()
-			err = mux.idStorage.Put(key, internalID)
+			err = mux.idStorage.Set(key, internalID)
 			if err != nil {
 				mux.logger.Log("Mux.handleInteractor:", err)
 			}
@@ -143,7 +143,7 @@ func (mux *Mux) OnAuthorized(from Service, internalID int64) {
 		mux.handleAuthorizeDestination(interactor, Message{UserID: transferState.interactorUserID}, internalID)
 	} else {
 		transferState.sourceServiceAuthorized = true
-		err = mux.transferStorage.Put(internalID, transferState)
+		err = mux.transferStorage.Set(internalID, transferState)
 		if err != nil {
 			mux.handleError(fmt.Errorf("OnAuthorized: Unable to put transfer state: %w", err),
 				interactor, Message{

@@ -29,7 +29,7 @@ func (cs *cacheStorage[Key, T]) Get(id Key) (T, error) {
 	return cs.storage[id], nil
 }
 
-func (cs *cacheStorage[Key, T]) Put(id Key, data T) error {
+func (cs *cacheStorage[Key, T]) Set(id Key, data T) error {
 	cs.Lock()
 	defer cs.Unlock()
 	cs.storage[id] = data

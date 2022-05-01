@@ -16,7 +16,7 @@ func (yt *youtubeService) BindOnAuthorized(OnAuthorized mux.OnAuthorized) {
 }
 
 func (yt *youtubeService) OnGetTokens(userID int64, tokens youtube.Credentials) error {
-	err := yt.tokenStorage.Put(userID, tokens)
+	err := yt.tokenStorage.Set(userID, tokens)
 	if err != nil {
 		return err
 	}

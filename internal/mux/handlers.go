@@ -72,7 +72,7 @@ func (mux *Mux) handleChooseSource(from Interactor, msg Message, internalID int6
 	}
 
 	if authorized {
-		err = mux.transferStorage.Put(internalID, TransferState{
+		err = mux.transferStorage.Set(internalID, TransferState{
 			sourceServiceName:       source.Name(),
 			sourceServiceAuthorized: true,
 			activeInteractorName:    from.Name(),
@@ -89,7 +89,7 @@ func (mux *Mux) handleChooseSource(from Interactor, msg Message, internalID int6
 			mux.handleError(fmt.Errorf("Unable to get auth url: %w", err), from, msg)
 			return
 		}
-		err = mux.transferStorage.Put(internalID, TransferState{
+		err = mux.transferStorage.Set(internalID, TransferState{
 			sourceServiceName:       source.Name(),
 			sourceServiceAuthorized: false,
 			activeInteractorName:    from.Name(),
@@ -162,7 +162,7 @@ func (mux *Mux) handleChooseDestination(from Interactor, msg Message, internalID
 			return
 		}
 		transferState.destinationServiceName = destination.Name()
-		err = mux.transferStorage.Put(internalID, transferState)
+		err = mux.transferStorage.Set(internalID, transferState)
 		if err != nil {
 			mux.handleError(fmt.Errorf("Unable to put transfer state: %w", err), from, msg)
 			return
@@ -174,7 +174,7 @@ func (mux *Mux) handleChooseDestination(from Interactor, msg Message, internalID
 			mux.handleError(fmt.Errorf("Unable to get auth url: %w", err), from, msg)
 			return
 		}
-		err = mux.transferStorage.Put(internalID, TransferState{
+		err = mux.transferStorage.Set(internalID, TransferState{
 			sourceServiceName:       destination.Name(),
 			sourceServiceAuthorized: false,
 			activeInteractorName:    from.Name(),

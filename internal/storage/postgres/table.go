@@ -7,19 +7,32 @@ import (
 )
 
 type Table[Key comparable, T any] struct {
-	psql    *Postgres
-	columns []string
-	name    string
-	key     string
+	psql          *Postgres
+	name          string
+	key           string
+	columnsJoined string
+	updateColumns string
+	insertColumns string
 }
 
 func NewTable[Key comparable, T any](psql *Postgres, name string, key string) *Table[Key, T] {
 	var val T
+	columns := reflectColumns(val)
+	updateColumns := ""
+	for i, c := range columns {
+		if i > 0 {
+			updateColumns += ", "
+		}
+		updateColumns += c + "=:" + c
+	}
+	insertColumns := ":" + strings.Join(columns, ", :")
 	return &Table[Key, T]{
-		psql:    psql,
-		name:    name,
-		key:     key,
-		columns: reflectColumns(val),
+		psql:          psql,
+		name:          name,
+		key:           key,
+		columnsJoined: strings.Join(columns, ", "),
+		updateColumns: updateColumns,
+		insertColumns: insertColumns,
 	}
 }
 
@@ -37,7 +50,8 @@ func (t *Table[Key, T]) Exist(key Key) (bool, error) {
 
 func (t *Table[Key, T]) Get(key Key) (T, error) {
 	result := []T{}
-	query := "SELECT " + strings.Join(t.columns, ", ") + " FROM " + t.name + " WHERE " + t.key + " = $1"
+	query := "SELECT " + t.columnsJoined + " FROM " + t.name + " WHERE " + t.key +
+		" = $1"
 	err := t.psql.Select(&result, query, &key)
 	if err != nil {
 		var r T
@@ -54,26 +68,26 @@ func (t *Table[Key, T]) Get(key Key) (T, error) {
 	return result[0], nil
 }
 
-func (t *Table[Key, T]) Put(key Key, val T) error {
-	ok, err := t.Exist(key)
+func (t *Table[Key, T]) Set(key Key, val T) error {
+	exists, err := t.Exist(key)
 	if err != nil {
 		return err
 	}
 
-	if !ok {
-		_, err = t.psql.Exec("INSERT INTO "+t.name+" ("+t.key+") VALUES($1)", &key)
+	if exists {
+		query := "UPDATE " + t.name + " SET " + t.updateColumns + " WHERE " + t.key + " = " + fmt.Sprintf("%v", key)
+		_, err = t.psql.NamedExec(query, val)
+		if err != nil {
+			return err
+		}
+	} else {
+		query := "INSERT INTO " + t.name + "(" + t.key + ", " + t.columnsJoined +
+			") VALUES(" + fmt.Sprintf("%v", key) + ", " + t.insertColumns + ")"
+		_, err = t.psql.NamedExec(query, &val)
 		if err != nil {
 			return err
 		}
 	}
-	query := "UPDATE " + t.name + " SET "
-	for i, c := range t.columns {
-		if i > 0 {
-			query += ", "
-		}
-		query += c + "=:" + c
-	}
-	query += " WHERE " + t.key + " = " + fmt.Sprintf("%v", key)
-	_, err = t.psql.NamedExec(query, val)
-	return err
+
+	return nil
 }

@@ -21,6 +21,7 @@ import (
 	"github.com/de1phin/music-transfer/internal/service/youtube"
 	"github.com/de1phin/music-transfer/internal/storage/cache"
 	"github.com/de1phin/music-transfer/internal/storage/postgres"
+	"github.com/de1phin/music-transfer/internal/storage/redis"
 )
 
 func main() {
@@ -41,7 +42,7 @@ func main() {
 
 	server := server.NewServer(config.Server)
 
-	spotifyStorage := postgres.NewTable[int64, spotifyAPI.Credentials](psql, "Spotify", "id")
+	spotifyStorage := redis.NewRedis[int64, spotifyAPI.Credentials](config.Redis, 0, time.Second*3600)
 	spotifyAPI := spotifyAPI.NewSpotifyAPI(config.Spotify, fileLogger)
 	spotify := spotify.NewSpotifyService(config.Spotify, spotifyAPI, spotifyStorage)
 	spotifyAPI.BindHandler(server.ServeMux, spotify.OnGetTokens)
