@@ -21,20 +21,20 @@ func (api *SpotifyAPI) callbackHandler(onGetTokens OnGetTokens) func(http.Respon
 	return func(w http.ResponseWriter, r *http.Request) {
 		m, err := url.ParseQuery(r.URL.RawQuery)
 		if err != nil {
-			api.logger.Log(fmt.Errorf("SpotifyAPI.callbackHandler: url.ParseQuery error: %w", err))
+			api.logger.Error(fmt.Errorf("Spotify: Unable to handle callback: Unable to parse URL query: %w", err))
 			return
 		}
 		if len(m["state"]) == 0 {
-			api.logger.Log(fmt.Errorf("SpotifyAPI.callbackHandler: No state provided"))
+			api.logger.Error(fmt.Errorf("Spotify: Unable to handle callback: No state provided"))
 			return
 		}
 		userID, err := strconv.ParseInt(m["state"][0], 10, 64)
 		if err != nil {
-			api.logger.Log(fmt.Errorf("SpotifyAPI.callbackHandler: strconv.ParseInt error: %w", err))
+			api.logger.Error(fmt.Errorf("Spotify: Unable to handle callback: Unable to parse int: %w", err))
 			return
 		}
 		if len(m["state"]) == 0 {
-			api.logger.Log(fmt.Errorf("SpotifyAPI.callbackHandler: No code provided"))
+			api.logger.Error(fmt.Errorf("Spotify: Unable to handle callback: No code provided"))
 			return
 		}
 		authorizationCode := m["code"][0]
@@ -43,7 +43,7 @@ func (api *SpotifyAPI) callbackHandler(onGetTokens OnGetTokens) func(http.Respon
 		body := bytes.NewReader([]byte(rawBody))
 		request, err := http.NewRequest("POST", "https://accounts.spotify.com/api/token", body)
 		if err != nil {
-			api.logger.Log(fmt.Errorf("SpotifyAPI.callbackHandler: http.NewRequest error: %w", err))
+			api.logger.Error(fmt.Errorf("Spotify: Unable to handle callback: Unable to create request: %w", err))
 			return
 		}
 
@@ -53,25 +53,25 @@ func (api *SpotifyAPI) callbackHandler(onGetTokens OnGetTokens) func(http.Respon
 
 		response, err := api.httpClient.Do(request)
 		if err != nil {
-			api.logger.Log(fmt.Errorf("SpotifyAPI.callbackHandler: httpClient.Do error: %w", err))
+			api.logger.Error(fmt.Errorf("Spotify: Unable to handle callback: Unable to do request: %w", err))
 			return
 		}
 
 		respBuf, err := io.ReadAll(response.Body)
 		if err != nil {
-			api.logger.Log(fmt.Errorf("SpotifyAPI.callbackHandler: Read response body error: %w", err))
+			api.logger.Error(fmt.Errorf("Spotify: Unable to handle callback: Unable to read body: %w", err))
 			return
 		}
 
 		credentials := Credentials{}
 		err = json.Unmarshal(respBuf, &credentials)
 		if err != nil {
-			api.logger.Log(fmt.Errorf("SpotifyAPI.callbackHandler: Unmarshal response body error: %w", err))
+			api.logger.Error(fmt.Errorf("Spotify: Unable to handle callback: Could not unmarshal: %w", err))
 			return
 		}
 
 		if err := onGetTokens(userID, credentials); err != nil {
-			api.logger.Log(fmt.Errorf("SpotifyAPI.callbackHandler: OnGetTokens error: %w", err))
+			api.logger.Error(fmt.Errorf("Spotify: Unable to handle callback: OnGetTokens error: %w", err))
 		}
 	}
 }

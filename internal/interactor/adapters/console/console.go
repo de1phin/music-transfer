@@ -33,7 +33,7 @@ func (ca *ConsoleAdapter) GetMessage() (msg mux.Message, err error) {
 	msg.UserID = ca.defaultUserID
 	msg.UserState = ca.userState
 	msg.Content.Text = strings.ToLower(strings.Trim(text, " \n\r\t"))
-	return msg, err
+	return msg, nil
 }
 
 func (ca *ConsoleAdapter) SendMessage(msg mux.Message) error {

@@ -1,6 +1,8 @@
 package spotify
 
 import (
+	"fmt"
+
 	"github.com/de1phin/music-transfer/internal/api/spotify"
 	spotifyAPI "github.com/de1phin/music-transfer/internal/api/spotify"
 	"github.com/de1phin/music-transfer/internal/mux"
@@ -36,11 +38,11 @@ func (spotify *spotifyService) Name() string {
 func (spotify *spotifyService) GetLiked(userID int64) (liked mux.Playlist, err error) {
 	tokens, err := spotify.tokenStorage.Get(userID)
 	if err != nil {
-		return liked, err
+		return liked, fmt.Errorf("Unable to get tokens: %w", err)
 	}
 	playlist, err := spotify.api.GetLiked(tokens)
 	if err != nil {
-		return liked, err
+		return liked, fmt.Errorf("Unable to get liked: %w", err)
 	}
 	liked.Title = playlist.Name
 	for _, track := range playlist.Tracks.Items {
@@ -61,13 +63,13 @@ func (spotify *spotifyService) GetLiked(userID int64) (liked mux.Playlist, err e
 func (spotify *spotifyService) AddLiked(userID int64, liked mux.Playlist) error {
 	tokens, err := spotify.tokenStorage.Get(userID)
 	if err != nil {
-		return err
+		return fmt.Errorf("Unable to get tokens: %w", err)
 	}
 	tracks := make([]spotifyAPI.Track, 0)
 	for _, track := range liked.Songs {
 		search, err := spotify.api.SearchTrack(tokens, track.Title, track.Artists)
 		if err != nil {
-			return err
+			return fmt.Errorf("Unable to search track: %w", err)
 		}
 		if len(search) == 0 {
 			continue
@@ -80,16 +82,16 @@ func (spotify *spotifyService) AddLiked(userID int64, liked mux.Playlist) error 
 func (spotify *spotifyService) GetPlaylists(userID int64) (playlists []mux.Playlist, err error) {
 	tokens, err := spotify.tokenStorage.Get(userID)
 	if err != nil {
-		return playlists, err
+		return playlists, fmt.Errorf("Unable to get tokens: %w", err)
 	}
 	spotifyPlaylists, err := spotify.api.GetUserPlaylists(tokens)
 	if err != nil {
-		return playlists, err
+		return playlists, fmt.Errorf("Unable to get user playlists: %w", err)
 	}
 	for _, playlist := range spotifyPlaylists {
 		tracks, err := spotify.api.GetPlaylistTracks(tokens, playlist.ID)
 		if err != nil {
-			return playlists, err
+			return playlists, fmt.Errorf("Unable to get playlist tracks: %w", err)
 		}
 		muxSongs := make([]mux.Song, len(tracks))
 		for i := range tracks {
@@ -112,11 +114,11 @@ func (spotify *spotifyService) GetPlaylists(userID int64) (playlists []mux.Playl
 func (spotify *spotifyService) AddPlaylists(userID int64, playlists []mux.Playlist) error {
 	tokens, err := spotify.tokenStorage.Get(userID)
 	if err != nil {
-		return err
+		return fmt.Errorf("Unable to get tokens: %w", err)
 	}
 	userPlaylists, err := spotify.api.GetUserPlaylists(tokens)
 	if err != nil {
-		return err
+		return fmt.Errorf("Unable to get user playlists: %w", err)
 	}
 
 	for _, playlist := range playlists {
@@ -130,7 +132,7 @@ func (spotify *spotifyService) AddPlaylists(userID int64, playlists []mux.Playli
 		if playlistID == "" {
 			playlist, err := spotify.api.CreatePlaylist(tokens, playlist.Title)
 			if err != nil {
-				return err
+				return fmt.Errorf("Unable to create playlist: %w", err)
 			}
 			playlistID = playlist.ID
 		}
@@ -139,7 +141,7 @@ func (spotify *spotifyService) AddPlaylists(userID int64, playlists []mux.Playli
 		for _, song := range playlist.Songs {
 			search, err := spotify.api.SearchTrack(tokens, song.Title, song.Artists)
 			if err != nil {
-				return err
+				return fmt.Errorf("Unable to search track: %w", err)
 			}
 			if len(search) == 0 {
 				continue
@@ -148,7 +150,7 @@ func (spotify *spotifyService) AddPlaylists(userID int64, playlists []mux.Playli
 		}
 		err = spotify.api.AddToPlaylist(tokens, playlistID, tracks)
 		if err != nil {
-			return err
+			return fmt.Errorf("Unable to add to playlist: %w", err)
 		}
 	}
 

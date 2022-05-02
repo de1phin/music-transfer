@@ -25,7 +25,7 @@ func (spotify *spotifyService) BindOnAuthorized(OnAuthorized mux.OnAuthorized) {
 func (ss *spotifyService) OnGetTokens(userID int64, tokens spotify.Credentials) error {
 	err := ss.tokenStorage.Set(userID, tokens)
 	if err != nil {
-		return err
+		return fmt.Errorf("Unable to set tokens: %w", err)
 	}
 	if ss.OnAuthorizedNotify != nil {
 		ss.OnAuthorizedNotify(ss, userID)
@@ -36,14 +36,14 @@ func (ss *spotifyService) OnGetTokens(userID int64, tokens spotify.Credentials) 
 func (ss *spotifyService) Authorized(userID int64) (bool, error) {
 	exist, err := ss.tokenStorage.Exist(userID)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Unable to check tokens: %w", err)
 	}
 	if !exist {
 		return false, nil
 	}
 	tokens, err := ss.tokenStorage.Get(userID)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Unable to get tokens: %w", err)
 	}
 	return ss.api.Authorized(tokens)
 }

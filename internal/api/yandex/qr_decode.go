@@ -2,11 +2,11 @@ package yandex
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	"image/draw"
 
 	"github.com/liyue201/goqr"
-	"github.com/pkg/errors"
 	"github.com/srwiley/oksvg"
 	"github.com/srwiley/rasterx"
 )
@@ -14,7 +14,7 @@ import (
 func decodeSVG(svg []byte) (image.Image, error) {
 	icon, err := oksvg.ReadIconStream(bytes.NewReader(svg))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Unable to read icon stream: %w", err)
 	}
 	w := 265
 	h := 265
@@ -29,14 +29,14 @@ func decodeSVG(svg []byte) (image.Image, error) {
 func decodeQR(svg []byte) (url string, err error) {
 	img, err := decodeSVG(svg)
 	if err != nil {
-		return url, err
+		return url, fmt.Errorf("Unable to decode SVG: %w", err)
 	}
 	qrCodes, err := goqr.Recognize(img)
 	if err != nil {
-		return url, err
+		return url, fmt.Errorf("Unable to recognize QR: %w", err)
 	}
 	if len(qrCodes) != 1 {
-		return url, errors.New("YandexAPI.decodeQR: Invalid QRCode")
+		return url, fmt.Errorf("Invalid QRCode")
 	}
 	url = string(qrCodes[0].Payload)
 	return url, nil

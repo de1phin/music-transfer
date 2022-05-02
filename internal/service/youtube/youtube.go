@@ -1,6 +1,7 @@
 package youtube
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/de1phin/music-transfer/internal/api/youtube"
@@ -31,11 +32,11 @@ func (*youtubeService) Name() string {
 func (yt *youtubeService) GetLiked(userID int64) (liked mux.Playlist, err error) {
 	tokens, err := yt.tokenStorage.Get(userID)
 	if err != nil {
-		return liked, err
+		return liked, fmt.Errorf("Unable to get tokens: %w", err)
 	}
 	videos, err := yt.api.GetLiked(tokens)
 	if err != nil {
-		return liked, err
+		return liked, fmt.Errorf("Unable to get liked: %w", err)
 	}
 	for _, video := range videos {
 		liked.Songs = append(liked.Songs, mux.Song{
@@ -54,12 +55,12 @@ func (yt *youtubeService) AddLiked(userID int64, liked mux.Playlist) error {
 	for _, song := range liked.Songs {
 		videoID, err := yt.api.SearchVideo(song.Title, song.Artists)
 		if err != nil {
-			yt.logger.Log("Youtube.AddLiked:", err)
+			yt.logger.Error(fmt.Errorf("Youtube: Unable to add liked: Unable to search video: %w", err))
 			continue
 		}
 		err = yt.api.LikeVideo(tokens, videoID)
 		if err != nil {
-			yt.logger.Log("Youtube.AddLiked:", err)
+			yt.logger.Error(fmt.Errorf("Youtube: Unable to add liked: Unable to like video: %w", err))
 			continue
 		}
 	}
@@ -69,18 +70,18 @@ func (yt *youtubeService) AddLiked(userID int64, liked mux.Playlist) error {
 func (yt *youtubeService) GetPlaylists(userID int64) (playlists []mux.Playlist, err error) {
 	tokens, err := yt.tokenStorage.Get(userID)
 	if err != nil {
-		return playlists, err
+		return playlists, fmt.Errorf("Unable to get tokens: %w", err)
 	}
 
 	ytplaylists, err := yt.api.GetUserPlaylists(tokens)
 	if err != nil {
-		return playlists, err
+		return playlists, fmt.Errorf("Unable to get user playlists: %w", err)
 	}
 
 	for _, playlist := range ytplaylists {
 		videos, err := yt.api.GetPlaylistContent(tokens, playlist.ID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Unable to get playlist content: %w", err)
 		}
 		songs := make([]mux.Song, len(videos))
 		for i := range videos {
@@ -101,11 +102,11 @@ func (yt *youtubeService) GetPlaylists(userID int64) (playlists []mux.Playlist, 
 func (yt *youtubeService) AddPlaylists(userID int64, playlists []mux.Playlist) error {
 	tokens, err := yt.tokenStorage.Get(userID)
 	if err != nil {
-		return err
+		return fmt.Errorf("Unable to get tokens: %w", err)
 	}
 	userPlaylists, err := yt.api.GetUserPlaylists(tokens)
 	if err != nil {
-		return err
+		return fmt.Errorf("Unable to get user playlists: %w", err)
 	}
 	for _, playlist := range playlists {
 		exist := false
@@ -121,7 +122,7 @@ func (yt *youtubeService) AddPlaylists(userID int64, playlists []mux.Playlist) e
 		if !exist {
 			playlist, err := yt.api.CreatePlaylist(tokens, playlist.Title)
 			if err != nil {
-				return err
+				return fmt.Errorf("Unable to create playlist: %w", err)
 			}
 			playlistID = playlist.ID
 		}
@@ -130,12 +131,12 @@ func (yt *youtubeService) AddPlaylists(userID int64, playlists []mux.Playlist) e
 			time.Sleep(time.Millisecond * 50)
 			videoID, err := yt.api.SearchVideo(v.Title, v.Artists)
 			if err != nil {
-				yt.logger.Log("Youtube.AddPlaylists:", err)
+				yt.logger.Error(fmt.Errorf("Youtube: Unable to add playlists: %w", err))
 				continue
 			}
 			err = yt.api.AddToPlaylist(tokens, playlistID, videoID)
 			if err != nil {
-				yt.logger.Log("Youtube.AddPlaylists:", err)
+				yt.logger.Error(fmt.Errorf("Youtube: Unable to add playlists: %w", err))
 				continue
 			}
 		}

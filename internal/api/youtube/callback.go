@@ -20,21 +20,21 @@ func (api *YoutubeAPI) callbackHandler(onGetTokens OnGetTokens) func(w http.Resp
 	return func(w http.ResponseWriter, r *http.Request) {
 		m, err := url.ParseQuery(r.URL.RawQuery)
 		if err != nil {
-			api.logger.Log(fmt.Errorf("YoutubeAPI.callbackHandler: url.ParseQuery error: %w", err))
+			api.logger.Error(fmt.Errorf("Youtube: Unable to handle callback: Unable to parse URL query: %w", err))
 			return
 		}
 		if len(m["state"]) == 0 {
-			api.logger.Log(fmt.Errorf("YoutubeAPI.callbackHandler: No state provided"))
+			api.logger.Error(fmt.Errorf("Youtube: Unable to handle callback: No state provided"))
 			return
 		}
 		userID, err := strconv.ParseInt(m["state"][0], 10, 64)
 		if err != nil {
-			api.logger.Log(fmt.Errorf("YoutubeAPI.callbackHandler: strconv.ParseInt error: %w", err))
+			api.logger.Error(fmt.Errorf("Youtube: Unable to handle callback: Unable to parse int: %w", err))
 			return
 		}
 
 		if len(m["code"]) == 0 {
-			api.logger.Log(fmt.Errorf("YoutubeAPI.callbackHandler: No code provided"))
+			api.logger.Error(fmt.Errorf("Youtube: Unable to handle callback: No code provided"))
 			return
 		}
 		code := m["code"][0]
@@ -43,33 +43,33 @@ func (api *YoutubeAPI) callbackHandler(onGetTokens OnGetTokens) func(w http.Resp
 
 		request, err := http.NewRequest("POST", "https://oauth2.googleapis.com/token", body)
 		if err != nil {
-			api.logger.Log(fmt.Errorf("YoutubeAPI.callbackHandler: http.NewRequest error: %w", err))
+			api.logger.Error(fmt.Errorf("Youtube: Unable to handle callback: Unable to create request: %w", err))
 			return
 		}
 		request.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 
 		response, err := api.httpClient.Do(request)
 		if err != nil {
-			api.logger.Log(fmt.Errorf("YoutubeAPI.callbackHandler:  error: %w", err))
+			api.logger.Error(fmt.Errorf("Youtube: Unable to handle callback: Unable to do request: %w", err))
 			return
 		}
 
 		jsonEncoded, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			api.logger.Log(fmt.Errorf("YoutubeAPI.callbackHandler:  error: %w", err))
+			api.logger.Error(fmt.Errorf("Youtube: Unable to handle callback: Unable to read body: %w", err))
 			return
 		}
 
 		tokens := Credentials{}
 		err = json.Unmarshal(jsonEncoded, &tokens)
 		if err != nil {
-			api.logger.Log(fmt.Errorf("YoutubeAPI.callbackHandler:  error: %w", err))
+			api.logger.Error(fmt.Errorf("Youtube: Unable to handle callback: Unable to unmarshal: %w", err))
 			return
 		}
 
 		err = onGetTokens(userID, tokens)
 		if err != nil {
-			api.logger.Log(fmt.Errorf("YoutubeAPI.callbackHandler:  error: %w", err))
+			api.logger.Error(fmt.Errorf("Youtube: Unable to handle callback: OnGetTokens: %w", err))
 			return
 		}
 	}

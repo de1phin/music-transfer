@@ -67,27 +67,29 @@ func (mux *Mux) Run(quit <-chan struct{}) {
 func (mux *Mux) listenInteractor(interactor Interactor) {
 	for {
 		msg, err := interactor.GetMessage()
-		mux.logger.Log("Mux.handleInteractor: New message via " + interactor.Name())
 		if err != nil {
-			mux.logger.Log(err)
+			mux.logger.Error(fmt.Errorf("Mux: Unable to get message: %w", err))
 			continue
 		}
+		mux.logger.Info("Mux.handleInteractor: New message via " + interactor.Name())
 		key := interactor.Name() + ":" + fmt.Sprintf("%d", msg.UserID)
 		var internalID int64
 		ok, err := mux.idStorage.Exist(key)
 		if err != nil {
-			mux.logger.Log("Mux.handleInteractor:", err)
+			mux.logger.Error(fmt.Errorf("%w", err))
 		}
 		if ok {
 			internalID, err = mux.idStorage.Get(key)
 			if err != nil {
-				mux.logger.Log("Mux.handleInteractor:", err)
+				mux.logger.Error(fmt.Errorf("Mux: Unable to get internal ID: %w", err))
+				continue
 			}
 		} else {
 			internalID = mux.IDGenerator.NextID()
 			err = mux.idStorage.Set(key, internalID)
 			if err != nil {
-				mux.logger.Log("Mux.handleInteractor:", err)
+				mux.logger.Error(fmt.Errorf("Mux: Unable to set internal ID: %w", err))
+				continue
 			}
 		}
 
@@ -97,7 +99,7 @@ func (mux *Mux) listenInteractor(interactor Interactor) {
 				break
 			}
 		}
-		mux.logger.Log("Mux.handleInteractor: Message handled in " + time.Since(start).String())
+		mux.logger.Info("Mux: Message handled in " + time.Since(start).String())
 	}
 }
 
@@ -124,35 +126,31 @@ func (mux *Mux) transfer(from Service, to Service, userID int64) error {
 }
 
 func (mux *Mux) OnAuthorized(from Service, internalID int64) {
-	fmt.Println("Notified from", from.Name(), "about", internalID)
+	mux.logger.Info("Mux: New user authorized via " + from.Name())
 	transferState, err := mux.transferStorage.Get(internalID)
 	if err != nil {
-		mux.logger.Log("mux: OnAuthorized: Unable to get transfer state: %w", err)
+		mux.logger.Error(fmt.Errorf("Mux: OnAuthorized: Unable to get transfer state: %w", err))
 		return
 	}
 
 	interactor := mux.GetInteractorByName(transferState.activeInteractorName)
 	if interactor == nil {
-		mux.logger.Log("mux: OnAuthorized: Active Interactor is nil")
+		mux.logger.Error(fmt.Errorf("Mux: OnAuthorized: Active interactor is nil: %w", err))
 		return
 	}
-	fmt.Println("Interactor:", interactor.Name())
 
 	if transferState.sourceServiceAuthorized {
-		fmt.Println("HandleAuthorizeDestination")
 		mux.handleAuthorizeDestination(interactor, Message{UserID: transferState.interactorUserID}, internalID)
 	} else {
 		transferState.sourceServiceAuthorized = true
 		err = mux.transferStorage.Set(internalID, transferState)
 		if err != nil {
-			mux.handleError(fmt.Errorf("OnAuthorized: Unable to put transfer state: %w", err),
+			mux.handleError(fmt.Errorf("Mux: OnAuthorized: Unable to put transfer state: %w", err),
 				interactor, Message{
 					UserID: transferState.interactorUserID,
 				})
 			return
 		}
-		fmt.Println("HandleAuthorizeSource")
 		mux.handleAuthorizeSource(interactor, Message{UserID: transferState.interactorUserID}, internalID)
 	}
-	fmt.Println("Done")
 }

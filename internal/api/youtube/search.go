@@ -3,7 +3,7 @@ package youtube
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -76,31 +76,31 @@ func (api *YoutubeAPI) SearchVideo(title string, artists string) (videoID string
 	}
 	req, err := http.NewRequest("POST", url, bytes.NewReader(data))
 	if err != nil {
-		return videoID, err
+		return videoID, fmt.Errorf("Unable to create request: %w", err)
 	}
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("content-type", "application/json")
 
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return videoID, err
+		return videoID, fmt.Errorf("Unable to do request: %w", err)
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return videoID, err
+		return videoID, fmt.Errorf("Unable to read body: %w", err)
 	}
 
 	search := searchResponse{}
 	err = json.Unmarshal(body, &search)
 	if err != nil {
-		return videoID, err
+		return videoID, fmt.Errorf("Unable to unmarshal: %w", err)
 	}
 
 	if len(search.Contents.TwoColumnSearchResultsRenderer.PrimaryContents.SectionListRenderer.Contents) == 0 {
-		return videoID, errors.New("YoutubeAPI.SearchVideo: Contents empty")
+		return videoID, fmt.Errorf("Contents empty")
 	}
 	if len(search.Contents.TwoColumnSearchResultsRenderer.PrimaryContents.SectionListRenderer.Contents[0].ItemSectionRenderer.Contents) == 0 {
-		return videoID, errors.New("YoutubeAPI.SearchVideo: Contents empty")
+		return videoID, fmt.Errorf("Contents empty")
 	}
 
 	videoID = search.Contents.TwoColumnSearchResultsRenderer.PrimaryContents.SectionListRenderer.Contents[0].ItemSectionRenderer.Contents[0].VideoRenderer.VideoID

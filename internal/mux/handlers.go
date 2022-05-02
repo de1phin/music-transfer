@@ -21,14 +21,14 @@ func newHandler(state UserState, handler handler) handlerWrapper {
 }
 
 func (mux *Mux) handleError(err error, from Interactor, msg Message) {
-	mux.logger.Log(fmt.Errorf("mux: Unable to handle %v: %w", msg, err))
+	mux.logger.Error(fmt.Errorf("Mux: Unable to handle %v: %w", msg, err))
 	err = from.SendMessage(Message{
 		UserID:    msg.UserID,
 		UserState: Idle,
 		Content:   MessageContent{Text: "An error occured"},
 	})
 	if err != nil {
-		mux.logger.Log(fmt.Errorf("mux: Unable to send message: %w", err))
+		mux.logger.Error(fmt.Errorf("Mux: Unable to send message: %w", err))
 		return
 	}
 }
@@ -249,7 +249,7 @@ func (mux *Mux) handleAuthorizeDestination(from Interactor, msg Message, interna
 		return
 	}
 
-	mux.logger.Log("mux: Transfer done in", time.Since(start))
+	mux.logger.Info("Mux: Transfer done in", time.Since(start))
 }
 
 func (mux *Mux) handleTransfer(from Interactor, msg Message, internalID int64) {

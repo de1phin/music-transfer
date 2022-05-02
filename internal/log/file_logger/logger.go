@@ -6,9 +6,9 @@ import (
 )
 
 type FileLogger struct {
-	file          *os.File
-	errorLogger   *log.Logger
-	defaultLogger *log.Logger
+	file        *os.File
+	errorLogger *log.Logger
+	infoLogger  *log.Logger
 }
 
 func NewFileLogger(path string) (*FileLogger, error) {
@@ -19,25 +19,17 @@ func NewFileLogger(path string) (*FileLogger, error) {
 
 	fileLogger := &FileLogger{}
 	fileLogger.file = file
-	fileLogger.errorLogger = log.New(file, "ERROR: ", log.Ldate|log.Ltime)
-	fileLogger.defaultLogger = log.New(file, "", log.Ldate|log.Ltime)
+	fileLogger.errorLogger = log.New(file, "ERROR: ", log.Ldate|log.Ltime|log.Lmicroseconds)
+	fileLogger.infoLogger = log.New(file, "", log.Ldate|log.Ltime|log.Lmicroseconds)
 	return fileLogger, nil
 }
 
-func (fl *FileLogger) Log(x ...any) {
-	hasError := false
-	for _, i := range x {
-		if _, ok := i.(error); ok {
-			hasError = true
-			break
-		}
-	}
+func (fl *FileLogger) Error(x ...any) {
+	fl.errorLogger.Println(x...)
+}
 
-	if hasError {
-		fl.errorLogger.Println(x...)
-	} else {
-		fl.defaultLogger.Println(x...)
-	}
+func (fl *FileLogger) Info(x ...any) {
+	fl.infoLogger.Println(x...)
 }
 
 func (fl *FileLogger) Close() error {

@@ -3,7 +3,6 @@ package spotify
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -41,25 +40,28 @@ func (api *SpotifyAPI) GetLiked(tokens Credentials) (playlist Playlist, err erro
 		url := fmt.Sprintf("https://api.spotify.com/v1/me/tracks?limit=%d&offset=%d", limit, offset)
 		request, err := http.NewRequest("GET", url, nil)
 		if err != nil {
-			return playlist, err
+			return playlist, fmt.Errorf("Unable to create request: %w", err)
 		}
 		request.Header.Add("Content-Type", "application/json")
 		request.Header.Add("Authorization", "Bearer "+(tokens.AccessToken))
 
 		response, err := api.httpClient.Do(request)
 		if err != nil {
-			return playlist, err
+			return playlist, fmt.Errorf("Unable to do request: %w", err)
 		}
 		if response.StatusCode != http.StatusOK {
-			return playlist, errors.New("SpotifyAPI.GetLiked: " + response.Status)
+			return playlist, fmt.Errorf("Bad response status: %s", response.Status)
 		}
 
 		spotifyPlaylist := tracksResponse{}
 		body, err := io.ReadAll(response.Body)
 		if err != nil {
-			return playlist, err
+			return playlist, fmt.Errorf("Unable to read body: %w", err)
 		}
-		json.Unmarshal(body, &spotifyPlaylist)
+		err = json.Unmarshal(body, &spotifyPlaylist)
+		if err != nil {
+			return playlist, fmt.Errorf("Unable to unmarshal: %w", err)
+		}
 
 		for _, item := range spotifyPlaylist.Items {
 			playlist.Tracks.Items = append(playlist.Tracks.Items, TrackItem{
@@ -86,28 +88,28 @@ func (api *SpotifyAPI) SearchTrack(tokens Credentials, title string, artists str
 
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return results, err
+		return results, fmt.Errorf("Unable to create request: %w", err)
 	}
 	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
 	request.Header.Add("Content-Type", "application/json")
 
 	response, err := api.httpClient.Do(request)
 	if err != nil {
-		return results, err
+		return results, fmt.Errorf("Unable to do request: %w", err)
 	}
 	if response.StatusCode != http.StatusOK {
-		return results, errors.New("SpotifyAPI.SearchTrack: " + response.Status)
+		return results, fmt.Errorf("Bad response status: %s", response.Status)
 	}
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return results, err
+		return results, fmt.Errorf("Unable to read body: %w", err)
 	}
 	searchResponse := searchResponse{}
 
 	err = json.Unmarshal(body, &searchResponse)
 	if err != nil {
-		return results, err
+		return results, fmt.Errorf("Unable to unmarshal: %w", err)
 	}
 
 	results = searchResponse.Tracks.Items
@@ -129,17 +131,17 @@ func (api *SpotifyAPI) LikeTracks(tokens Credentials, tracks []Track) error {
 
 		request, err := http.NewRequest("PUT", url, nil)
 		if err != nil {
-			return err
+			return fmt.Errorf("Unable to create request: %w", err)
 		}
 		request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
 		request.Header.Add("Content-Type", "application/json")
 
 		response, err := api.httpClient.Do(request)
 		if err != nil {
-			return err
+			return fmt.Errorf("Unable to do request: %w", err)
 		}
 		if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusNoContent {
-			return errors.New("SpotifyAPI.LikeTracks: " + response.Status)
+			return fmt.Errorf("Bad response status: %s", response.Status)
 		}
 		if i+limit >= len(tracks) {
 			break
@@ -156,27 +158,27 @@ func (api *SpotifyAPI) GetUserPlaylists(tokens Credentials) (playlists []Playlis
 		url := fmt.Sprintf("https://api.spotify.com/v1/me/playlists?limit=%d&offset=%d", limit, offset)
 		request, err := http.NewRequest("GET", url, nil)
 		if err != nil {
-			return playlists, err
+			return playlists, fmt.Errorf("Unable to create request: %w", err)
 		}
 		request.Header.Add("Content-Type", "application/json")
 		request.Header.Add("Authorization", "Bearer "+(tokens.AccessToken))
 
 		response, err := api.httpClient.Do(request)
 		if err != nil {
-			return playlists, err
+			return playlists, fmt.Errorf("Unable to do request: %w", err)
 		}
 		if response.StatusCode != http.StatusOK {
-			return playlists, errors.New("SpotifyAPI.GetUserPlaylists: " + response.Status)
+			return playlists, fmt.Errorf("Bad response status: %s", response.Status)
 		}
 
 		spotifyPlaylists := playlistResponse{}
 		body, err := io.ReadAll(response.Body)
 		if err != nil {
-			return playlists, err
+			return playlists, fmt.Errorf("Unable to read body: %w", err)
 		}
 		err = json.Unmarshal(body, &spotifyPlaylists)
 		if err != nil {
-			return playlists, err
+			return playlists, fmt.Errorf("Unable to unmarshal: %w", err)
 		}
 
 		playlists = append(playlists, spotifyPlaylists.Items...)
@@ -198,27 +200,27 @@ func (api *SpotifyAPI) GetPlaylistTracks(tokens Credentials, playlistID string) 
 		url := fmt.Sprintf("https://api.spotify.com/v1/playlists/%s/tracks?limit=%d&offset=%d&fields=items(track(name,artists(name)))", playlistID, limit, offset)
 		request, err := http.NewRequest("GET", url, nil)
 		if err != nil {
-			return tracks, err
+			return tracks, fmt.Errorf("Unable to create request: %w", err)
 		}
 		request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
 		request.Header.Add("Content-Type", "application/json")
 
 		response, err := api.httpClient.Do(request)
 		if err != nil {
-			return tracks, err
+			return tracks, fmt.Errorf("Unable to do request: %w", err)
 		}
 		if response.StatusCode != http.StatusOK {
-			return tracks, errors.New("SpotifyAPI.GetPlaylistTracks: " + response.Status)
+			return tracks, fmt.Errorf("Bad response status: %s", response.Status)
 		}
 
 		tracksResponse := tracksResponse{}
 		body, err := ioutil.ReadAll(response.Body)
 		if err != nil {
-			return tracks, err
+			return tracks, fmt.Errorf("Unable to read body: %w", err)
 		}
 		err = json.Unmarshal(body, &tracksResponse)
 		if err != nil {
-			return tracks, err
+			return tracks, fmt.Errorf("Unable to unmarshal: %w", err)
 		}
 		tracks = append(tracks, tracksResponse.Items...)
 
@@ -234,26 +236,26 @@ func (api *SpotifyAPI) GetPlaylistTracks(tokens Credentials, playlistID string) 
 func (api *SpotifyAPI) GetUser(tokens Credentials) (user User, err error) {
 	request, err := http.NewRequest("GET", "https://api.spotify.com/v1/me", nil)
 	if err != nil {
-		return user, err
+		return user, fmt.Errorf("Unable to create request: %w", err)
 	}
 	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
 	request.Header.Add("Content-Type", "application/json")
 
 	response, err := api.httpClient.Do(request)
 	if err != nil {
-		return user, err
+		return user, fmt.Errorf("Unable to do request: %w", err)
 	}
 	if response.StatusCode != http.StatusOK {
-		return user, errors.New("SpotifyAPI.GetUser: " + response.Status)
+		return user, fmt.Errorf("Bad response status: %s", response.Status)
 	}
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		return user, err
+		return user, fmt.Errorf("Unable to read body: %w", err)
 	}
 
 	err = json.Unmarshal(body, &user)
 	if err != nil {
-		return user, err
+		return user, fmt.Errorf("Unable to unmarshal: %w", err)
 	}
 
 	return user, nil
@@ -264,23 +266,23 @@ func (api *SpotifyAPI) CreatePlaylist(tokens Credentials, name string) (playlist
 
 	user, err := api.GetUser(tokens)
 	if err != nil {
-		return playlist, err
+		return playlist, fmt.Errorf("Unable to get user: %w", err)
 	}
 
 	url := fmt.Sprintf("https://api.spotify.com/v1/users/%s/playlists", user.ID)
 	request, err := http.NewRequest("POST", url, body)
 	if err != nil {
-		return playlist, err
+		return playlist, fmt.Errorf("Unable to create request: %w", err)
 	}
 	request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
 	request.Header.Add("Content-Type", "application/json")
 
 	response, err := api.httpClient.Do(request)
 	if err != nil {
-		return playlist, err
+		return playlist, fmt.Errorf("Unable to do request: %w", err)
 	}
 	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusCreated {
-		return playlist, errors.New("SpotifyAPI.CreatePlaylist: " + response.Status)
+		return playlist, fmt.Errorf("Bad response status: %s", response.Status)
 	}
 
 	reqBody, err := ioutil.ReadAll(response.Body)
@@ -313,18 +315,18 @@ func (api *SpotifyAPI) AddToPlaylist(tokens Credentials, playlistID string, trac
 
 		request, err := http.NewRequest("POST", "https://api.spotify.com/v1/playlists/"+playlistID+"/tracks", dataReader)
 		if err != nil {
-			return err
+			return fmt.Errorf("Unable to create request: %w", err)
 		}
 		request.Header.Add("Authorization", "Bearer "+tokens.AccessToken)
 		request.Header.Add("Content-Type", "application/json")
 
 		response, err := api.httpClient.Do(request)
 		if err != nil {
-			return err
+			return fmt.Errorf("Unable to do request: %w", err)
 		}
 
 		if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusCreated {
-			return errors.New("SpotifyAPI.AddToPlaylist: " + response.Status)
+			return fmt.Errorf("Bad response status: %s", response.Status)
 		}
 
 		if i+limit >= len(tracks) {

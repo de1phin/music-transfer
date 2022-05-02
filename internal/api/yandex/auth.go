@@ -3,17 +3,16 @@ package yandex
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/pkg/errors"
 )
 
-type OnGetCredentials func(int64, Credentials)
+type OnGetCredentials func(int64, Credentials) error
 
 func (api *YandexAPI) BindOnGetCredentials(onGetCredentials OnGetCredentials) {
 	api.onGetCredentials = onGetCredentials
@@ -28,7 +27,7 @@ func (api *YandexAPI) checkStatus(userID int64, formTokens loginFormTokens, subm
 		data := "track_id=" + submitResponse.TrackID + "&csrf_token=" + submitResponse.CsrfToken
 		req, err := http.NewRequest("POST", url, strings.NewReader(data))
 		if err != nil {
-			api.logger.Log("YandexAPI.checkStatus:", err)
+			api.logger.Error(fmt.Errorf("Yandex: Unable to check status: Unable to create request: %w", err))
 			continue
 		}
 		for _, c := range formTokens.cookies {
@@ -36,11 +35,11 @@ func (api *YandexAPI) checkStatus(userID int64, formTokens loginFormTokens, subm
 		}
 		resp, err := api.httpClient.Do(req)
 		if err != nil {
-			api.logger.Log("YandexAPI.checkStatus:", err)
+			api.logger.Error(fmt.Errorf("Yandex: Unable to check status: Unable to do request: %w", err))
 			continue
 		}
 		if resp.StatusCode != http.StatusOK {
-			api.logger.Log(errors.New("YandexAPI.checkStatus: Status: " + resp.Status))
+			api.logger.Error(fmt.Errorf("Yandex: Unable to check status: Bad response status: %s", resp.Status))
 			continue
 		}
 
@@ -53,16 +52,20 @@ func (api *YandexAPI) checkStatus(userID int64, formTokens loginFormTokens, subm
 		}
 		if hasSessionID {
 			if resp.Body == nil {
-				api.logger.Log(errors.New("YandexAPI.GetMe: Empty body returned"))
+				api.logger.Error(fmt.Errorf("Yandex: Unable to check status: Empty body returned"))
 				continue
 			}
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				api.logger.Log(err)
+				api.logger.Error(fmt.Errorf("Yandex: Unable to check status: Unable to read body: %w", err))
 				continue
 			}
 			authResponse := authResponse{}
-			json.Unmarshal(body, &authResponse)
+			err = json.Unmarshal(body, &authResponse)
+			if err != nil {
+				api.logger.Error(fmt.Errorf("Yandex: Unable to check status: Unable to unmarshal: %w", err))
+				continue
+			}
 			credentials := Credentials{
 				UID: strconv.FormatInt(authResponse.UID, 10),
 			}
@@ -72,7 +75,10 @@ func (api *YandexAPI) checkStatus(userID int64, formTokens loginFormTokens, subm
 			for _, c := range formTokens.cookies {
 				credentials.Cookies += c.Name + "=" + c.Value + "; "
 			}
-			api.onGetCredentials(userID, credentials)
+			err = api.onGetCredentials(userID, credentials)
+			if err != nil {
+				api.logger.Error(fmt.Errorf("Yandex: Unable to check status: OnGetCredentials error: %w", err))
+			}
 			break
 		}
 	}
@@ -81,30 +87,26 @@ func (api *YandexAPI) checkStatus(userID int64, formTokens loginFormTokens, subm
 func (api *YandexAPI) GetAuthURL(userID int64) (url string, err error) {
 	formTokens, err := api.getYandexLoginFormTokens()
 	if err != nil {
-		api.logger.Log("YandexAPI.GetAuthURL.getYandexLoginFormTokens:", err)
-		return url, err
+		return url, fmt.Errorf("Unable to get yandex login form tokens: %w", err)
 	}
 
 	submitResponse, err := api.getYandexSubmitResponse(formTokens)
 	if err != nil {
-		api.logger.Log("YandexAPI.GetAuthURL.getYandexSubmitResponse:", err)
-		return url, err
+		return url, fmt.Errorf("Unable to get yandex submit response: %w", err)
 	}
 
 	if !api.UseFixedURL {
 		timer := time.Now()
 		svgQR, err := api.getQRCodeSVG(submitResponse.TrackID)
 		if err != nil {
-			api.logger.Log("YandexAPI.GetAuthURL.getQRCode:", err)
-			return url, err
+			return url, fmt.Errorf("Unable to get QR code: %w", err)
 		}
 
 		url, err = decodeQR(svgQR)
 		if err != nil {
-			api.logger.Log("YandexAPI.GetAuthURL.decodeQR:", err)
-			return url, err
+			return url, fmt.Errorf("Unable to decode QR: %w", err)
 		}
-		api.logger.Log("YandexAPI: QR fetched and decoded in", time.Since(timer))
+		api.logger.Info("YandexAPI: QR fetched and decoded in", time.Since(timer))
 	} else {
 		url = "https://passport.yandex.ru/am/push/qrsecure?track_id=" + submitResponse.TrackID +
 			"&magic=" + api.Magic
@@ -112,31 +114,31 @@ func (api *YandexAPI) GetAuthURL(userID int64) (url string, err error) {
 
 	go api.checkStatus(userID, formTokens, submitResponse)
 
-	return url, err
+	return url, nil
 }
 
 func (api *YandexAPI) getYandexLoginFormTokens() (tokens loginFormTokens, err error) {
 	req, err := http.NewRequest("GET", "https://passport.yandex.ru/auth", nil)
 	if err != nil {
-		return tokens, err
+		return tokens, fmt.Errorf("Unable to create request: %w", err)
 	}
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return tokens, err
+		return tokens, fmt.Errorf("Unable to do request: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return tokens, errors.New("YandexAPI.getYandexLoginFormTokens: Status - " + resp.Status)
+		return tokens, fmt.Errorf("Bad response status: %s", resp.Status)
 	}
 	html, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return tokens, err
+		return tokens, fmt.Errorf("Unable to read body: %w", err)
 	}
 
 	tokens.cookies = resp.Cookies()
 
 	csrfTokenBegin := bytes.Index(html, []byte("csrf_token"))
 	if csrfTokenBegin == -1 {
-		return tokens, errors.New("YandexAPI.getYandexLoginFormTokens: No csrf token provided")
+		return tokens, fmt.Errorf("No csrf token provided")
 	}
 	csrfTokenBegin = csrfTokenBegin + bytes.Index(html[csrfTokenBegin:], []byte("value=\"")) + 7
 	csrfTokenEnd := csrfTokenBegin + bytes.Index(html[csrfTokenBegin:], []byte("\""))
@@ -144,7 +146,7 @@ func (api *YandexAPI) getYandexLoginFormTokens() (tokens loginFormTokens, err er
 
 	processUUIDBegin := bytes.Index(html, []byte("process_uuid=")) + 13
 	if processUUIDBegin == -1 {
-		return tokens, errors.New("YandexAPI.getYandexLoginFormTokens: No processUUID provided")
+		return tokens, fmt.Errorf("No processUUID provided")
 	}
 	processUUIDEnd := processUUIDBegin + bytes.Index(html[processUUIDBegin:], []byte("\""))
 	tokens.processUUID = string(html[processUUIDBegin:processUUIDEnd])
@@ -157,7 +159,7 @@ func (api *YandexAPI) getYandexSubmitResponse(formTokens loginFormTokens) (submi
 		url.QueryEscape(formTokens.processUUID) + "&with_code=1"
 	req, err := http.NewRequest("POST", "https://passport.yandex.ru/registration-validations/auth/password/submit", strings.NewReader(data))
 	if err != nil {
-		return submit, err
+		return submit, fmt.Errorf("Unable to create request: %w", err)
 	}
 	for _, c := range formTokens.cookies {
 		req.AddCookie(c)
@@ -165,22 +167,19 @@ func (api *YandexAPI) getYandexSubmitResponse(formTokens loginFormTokens) (submi
 
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return submit, err
+		return submit, fmt.Errorf("Unable to do request: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return submit, errors.New("YandexAPI.getYandexSubmitResponse: Status:" + resp.Status)
-	}
-	if resp.Body == nil {
-		return submit, errors.New("YandexAPI.getYandexSubmitResponse: Empty body returned")
+		return submit, fmt.Errorf("Bad response status:" + resp.Status)
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return submit, err
+		return submit, fmt.Errorf("Unable to read body: %w", err)
 	}
 
 	err = json.Unmarshal(body, &submit)
 	if err != nil {
-		return submit, err
+		return submit, fmt.Errorf("Unable to unmarshal: %w", err)
 	}
 
 	return submit, nil
@@ -191,20 +190,21 @@ func (api *YandexAPI) getQRCodeSVG(trackID string) (svg []byte, err error) {
 	data := "track_id=" + trackID
 	req, err := http.NewRequest("GET", url, strings.NewReader(data))
 	if err != nil {
-		return svg, err
+		return svg, fmt.Errorf("Unable to create request: %w", err)
 	}
 
 	resp, err := api.httpClient.Do(req)
 	if err != nil {
-		return svg, err
+		return svg, fmt.Errorf("Unable to do request: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return svg, errors.New("YandexAPI.getQRCode: Status: " + resp.Status)
-	}
-	if resp.Body == nil {
-		return svg, errors.New("YandexAPI.getQRCode: Empty body returned")
+		return svg, fmt.Errorf("Bad response status: %w", err)
 	}
 
 	svg, err = ioutil.ReadAll(resp.Body)
-	return svg, err
+	if err != nil {
+		return svg, fmt.Errorf("Unable to read body: %w", err)
+	}
+
+	return svg, nil
 }

@@ -1,7 +1,7 @@
 package yandex
 
 import (
-	"errors"
+	"fmt"
 
 	"github.com/de1phin/music-transfer/internal/api/yandex"
 	"github.com/de1phin/music-transfer/internal/mux"
@@ -11,19 +11,19 @@ func (ya *Yandex) BindOnAuthorized(OnAuthorized mux.OnAuthorized) {
 	ya.OnAuthorized = OnAuthorized
 }
 
-func (ya *Yandex) OnGetCredentials(userID int64, credentials yandex.Credentials) {
+func (ya *Yandex) OnGetCredentials(userID int64, credentials yandex.Credentials) error {
 	user, err := ya.api.GetMe(credentials)
 	if err != nil {
-		ya.logger.Log(err)
-		return
+		return fmt.Errorf("Unable to get me: %w", err)
 	}
 	credentials.Login = user.Login
 	err = ya.storage.Set(userID, credentials)
 	if err != nil {
-		ya.logger.Log(errors.New("Yandex.OnGetCredentials: " + err.Error()))
+		return fmt.Errorf("Unable to set credentials: %w", err)
 	}
 
 	ya.OnAuthorized(ya, userID)
+	return nil
 }
 
 func (ya *Yandex) GetAuthURL(userID int64) (string, error) {
@@ -33,7 +33,7 @@ func (ya *Yandex) GetAuthURL(userID int64) (string, error) {
 func (ya *Yandex) Authorized(userID int64) (bool, error) {
 	ok, err := ya.storage.Exist(userID)
 	if err != nil {
-		return ok, err
+		return ok, fmt.Errorf("Unable to check credentials: %w", err)
 	}
 	if !ok {
 		return false, nil
@@ -44,7 +44,7 @@ func (ya *Yandex) Authorized(userID int64) (bool, error) {
 	}
 	_, err = ya.api.GetMe(credentials)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("Unable to get me: %w", err)
 	}
 	return true, nil
 }
